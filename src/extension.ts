@@ -1,12 +1,22 @@
 import * as vscode from 'vscode';
 import { TypeScriptParser } from './parsers/typescript/TypeScriptParser';
 import { IRTransformer } from './core/transformer/IRTransformer';
+import { WebViewProvider } from './webview/WebViewProvider';
 
 /**
  * 拡張機能のアクティベーション
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log('LogicFlowBridge が起動しました！');
+
+  // WebView Providerの登録
+  const provider = new WebViewProvider(context.extensionUri);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(
+      WebViewProvider.viewType,
+      provider
+    )
+  );
 
   // Visualizeコマンドの登録
   const visualizeCommand = vscode.commands.registerCommand(
@@ -51,16 +61,11 @@ export function activate(context: vscode.ExtensionContext) {
           file: filePath,
         });
 
-        // IRをJSON形式で表示（Phase 1の最小実装）
-        const irJson = JSON.stringify(ir, null, 2);
-        const doc = await vscode.workspace.openTextDocument({
-          content: irJson,
-          language: 'json',
-        });
-        await vscode.window.showTextDocument(doc, vscode.ViewColumn.Beside);
+        // WebViewにIRを送信
+        provider.sendFlowData(ir);
 
         vscode.window.showInformationMessage(
-          `フローチャートデータを生成しました（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`
+          `フローチャートを生成しました（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`
         );
       } catch (error: any) {
         vscode.window.showErrorMessage(

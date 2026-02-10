@@ -3,3 +3,8 @@ out
 .vscode-test/
 *.vsix
 .DS_Store
+# Ignore generated JS in webview source and sample
+webview-ui/src/**/*.js
+webview-ui/src/**/*.js.map
+sample/*.js
+sample/*.js.map

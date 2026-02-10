@@ -22,6 +22,24 @@
         "title": "LogicFlow: コードを可視化"
       }
     ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "logicflow-sidebar",
+          "title": "LogicFlow",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "logicflow-sidebar": [
+        {
+          "type": "webview",
+          "id": "logicflowbridge.flowView",
+          "name": "フローチャート"
+        }
+      ]
+    },
     "menus": {
       "editor/context": [
         {
@@ -33,10 +51,11 @@
     }
   },
   "scripts": {
-    "vscode:prepublish": "npm run compile",
+    "vscode:prepublish": "pnpm run compile && pnpm run compile:webview",
     "compile": "tsc -p ./",
+    "compile:webview": "pnpm --dir webview-ui run build",
     "watch": "tsc -watch -p ./",
-    "pretest": "npm run compile",
+    "pretest": "pnpm run compile",
     "lint": "eslint src --ext ts"
   },
   "devDependencies": {
