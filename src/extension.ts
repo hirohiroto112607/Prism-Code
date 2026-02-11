@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { TypeScriptParser } from './parsers/typescript/TypeScriptParser';
 import { IRTransformer } from './core/transformer/IRTransformer';
+import { MacroViewTransformer } from './core/transformer/MacroViewTransformer';
 import { FlowChartPanel } from './webview/FlowChartPanel';
 import { AIChatViewProvider } from './webview/AIChatViewProvider';
 
@@ -79,6 +80,120 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(visualizeCommand);
+
+  // マクロビュー切り替えコマンド
+  const switchToMacroCommand = vscode.commands.registerCommand(
+    'logicflowbridge.switchToMacro',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage('アクティブなエディタがありません');
+        return;
+      }
+
+      const document = editor.document;
+      const languageId = document.languageId;
+
+      if (
+        languageId !== 'typescript' &&
+        languageId !== 'typescriptreact' &&
+        languageId !== 'javascript' &&
+        languageId !== 'javascriptreact'
+      ) {
+        vscode.window.showErrorMessage(
+          `現在、TypeScript/JavaScriptのみサポートしています（現在: ${languageId}）`
+        );
+        return;
+      }
+
+      try {
+        const code = document.getText();
+        const filePath = document.fileName;
+
+        vscode.window.showInformationMessage('マクロビューを生成中...');
+        const parser = new TypeScriptParser();
+        const ast = parser.parse(code, filePath);
+
+        // マクロビュー用のデータを生成
+        const macroTransformer = new MacroViewTransformer();
+        const macroData = macroTransformer.transform(ast, {
+          language: parser.getSupportedLanguage(),
+          file: filePath,
+        });
+
+        // パネルを開いてマクロビューを表示
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateMacroView(macroData);
+
+        vscode.window.showInformationMessage(
+          `マクロビューを生成しました（関数: ${macroData.functions.length}個）`
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `エラーが発生しました: ${error.message}`
+        );
+        console.error('マクロビュー生成エラー:', error);
+      }
+    }
+  );
+
+  // ミクロビュー切り替えコマンド
+  const switchToMicroCommand = vscode.commands.registerCommand(
+    'logicflowbridge.switchToMicro',
+    async () => {
+      const editor = vscode.window.activeTextEditor;
+      if (!editor) {
+        vscode.window.showErrorMessage('アクティブなエディタがありません');
+        return;
+      }
+
+      const document = editor.document;
+      const languageId = document.languageId;
+
+      if (
+        languageId !== 'typescript' &&
+        languageId !== 'typescriptreact' &&
+        languageId !== 'javascript' &&
+        languageId !== 'javascriptreact'
+      ) {
+        vscode.window.showErrorMessage(
+          `現在、TypeScript/JavaScriptのみサポートしています（現在: ${languageId}）`
+        );
+        return;
+      }
+
+      try {
+        const code = document.getText();
+        const filePath = document.fileName;
+
+        vscode.window.showInformationMessage('ミクロビューを生成中...');
+        const parser = new TypeScriptParser();
+        const ast = parser.parse(code, filePath);
+
+        // IRに変換（ミクロビュー）
+        const transformer = new IRTransformer();
+        const ir = transformer.transform(ast, {
+          language: parser.getSupportedLanguage(),
+          file: filePath,
+        });
+
+        // パネルを開いてミクロビューを表示
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateFlowChart(ir);
+
+        vscode.window.showInformationMessage(
+          `ミクロビューを生成しました（ノード: ${ir.nodes.length}個）`
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `エラーが発生しました: ${error.message}`
+        );
+        console.error('ミクロビュー生成エラー:', error);
+      }
+    }
+  );
+
+  context.subscriptions.push(switchToMacroCommand, switchToMicroCommand);
 }
 
 /**

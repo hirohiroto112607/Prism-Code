@@ -20,6 +20,14 @@
       {
         "command": "logicflowbridge.visualize",
         "title": "LogicFlow: コードを可視化"
+      },
+      {
+        "command": "logicflowbridge.switchToMacro",
+        "title": "LogicFlowBridge: マクロビュー(俯瞰)"
+      },
+      {
+        "command": "logicflowbridge.switchToMicro",
+        "title": "LogicFlowBridge: ミクロビュー(詳細)"
       }
     ],
     "viewsContainers": {
@@ -46,6 +54,16 @@
           "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
           "command": "logicflowbridge.visualize",
           "group": "navigation"
+        },
+        {
+          "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
+          "command": "logicflowbridge.switchToMacro",
+          "group": "logicflow@1"
+        },
+        {
+          "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
+          "command": "logicflowbridge.switchToMicro",
+          "group": "logicflow@2"
         }
       ]
     }

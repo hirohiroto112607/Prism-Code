@@ -74,3 +74,37 @@ export interface IREdge {
   label?: string;
   type: 'control' | 'data';
 }
+
+/**
+ * マクロビュー用のデータ構造
+ */
+export interface MacroViewData {
+  metadata: IRMetadata;
+  functions: FunctionSummary[];
+  callGraph: FunctionCall[];
+}
+
+/**
+ * 関数の概要情報
+ */
+export interface FunctionSummary {
+  id: string;
+  name: string;
+  parameters: string[];
+  returnType?: string;
+  lineCount: number;
+  complexity: number;
+  location: SourceLocation;
+  hasLoops: boolean;
+  hasConditionals: boolean;
+}
+
+/**
+ * 関数呼び出し関係
+ */
+export interface FunctionCall {
+  id: string;
+  caller: string;
+  callee: string;
+  location: SourceLocation;
+}

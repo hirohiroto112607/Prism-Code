@@ -35,6 +35,12 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
           // TODO: Phase 3でGemini APIと統合
           this._handleUserMessage(message.text);
           break;
+        case 'switchToMacro':
+          vscode.commands.executeCommand('logicflowbridge.switchToMacro');
+          break;
+        case 'switchToMicro':
+          vscode.commands.executeCommand('logicflowbridge.switchToMicro');
+          break;
       }
     });
   }
@@ -139,6 +145,51 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       button:hover {
         background-color: var(--vscode-button-hoverBackground);
       }
+      .view-switcher {
+        margin-top: 15px;
+        padding: 15px;
+        background-color: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-panel-border);
+        border-radius: 6px;
+      }
+      .view-switcher-title {
+        font-size: 13px;
+        font-weight: bold;
+        margin-bottom: 10px;
+        color: var(--vscode-foreground);
+      }
+      .view-buttons {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .view-button {
+        padding: 10px;
+        background-color: var(--vscode-button-secondaryBackground);
+        color: var(--vscode-button-secondaryForeground);
+        border: 1px solid var(--vscode-button-border);
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+        font-size: 13px;
+        transition: all 0.2s;
+      }
+      .view-button:hover {
+        background-color: var(--vscode-button-secondaryHoverBackground);
+        transform: translateY(-1px);
+      }
+      .view-button-icon {
+        font-size: 16px;
+        margin-right: 8px;
+      }
+      .view-button-label {
+        font-weight: bold;
+      }
+      .view-button-desc {
+        font-size: 11px;
+        opacity: 0.7;
+        margin-top: 3px;
+      }
     </style>
   </head>
   <body>
@@ -146,6 +197,26 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       <div class="header">
         <div class="title">AI アシスタント</div>
         <div class="description">Phase 3で実装予定 (Gemini API)</div>
+      </div>
+
+      <div class="view-switcher">
+        <div class="view-switcher-title">📊 ビューモード切り替え</div>
+        <div class="view-buttons">
+          <button class="view-button" id="macroButton">
+            <div>
+              <span class="view-button-icon">🔭</span>
+              <span class="view-button-label">マクロビュー(俯瞰)</span>
+            </div>
+            <div class="view-button-desc">システム全体の構造を表示</div>
+          </button>
+          <button class="view-button" id="microButton">
+            <div>
+              <span class="view-button-icon">🔬</span>
+              <span class="view-button-label">ミクロビュー(詳細)</span>
+            </div>
+            <div class="view-button-desc">詳細なフローチャートを表示</div>
+          </button>
+        </div>
       </div>
       <div class="chat-container" id="chatContainer">
         <div class="message ai">
@@ -164,6 +235,8 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       const chatContainer = document.getElementById('chatContainer');
       const messageInput = document.getElementById('messageInput');
       const sendButton = document.getElementById('sendButton');
+      const macroButton = document.getElementById('macroButton');
+      const microButton = document.getElementById('microButton');
 
       // メッセージを送信
       function sendMessage() {
@@ -193,6 +266,14 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       sendButton.addEventListener('click', sendMessage);
       messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
+      });
+
+      // ビュー切り替えボタンのイベントリスナー
+      macroButton.addEventListener('click', () => {
+        vscode.postMessage({ type: 'switchToMacro' });
+      });
+      microButton.addEventListener('click', () => {
+        vscode.postMessage({ type: 'switchToMicro' });
       });
 
       // Extension側からのメッセージを受信

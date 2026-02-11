@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IR } from '../core/ir/IR';
+import { IR, MacroViewData } from '../core/ir/IR';
 
 /**
  * エディタエリアにフローチャートを表示するWebviewPanel
@@ -11,6 +11,7 @@ export class FlowChartPanel {
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
+  private _currentViewMode: 'micro' | 'macro' = 'micro';
 
   /**
    * FlowChartPanelを作成または既存のものを表示
@@ -67,12 +68,45 @@ export class FlowChartPanel {
   }
 
   /**
-   * IRデータをWebViewに送信してフローチャートを更新
+   * IRデータをWebViewに送信してフローチャートを更新（ミクロビュー）
    */
   public updateFlowChart(ir: IR): void {
+    this._currentViewMode = 'micro';
     this._panel.webview.postMessage({
       type: 'updateFlow',
       data: ir,
+      viewMode: 'micro',
+    });
+  }
+
+  /**
+   * マクロビューデータをWebViewに送信
+   */
+  public updateMacroView(macroData: MacroViewData): void {
+    this._currentViewMode = 'macro';
+    this._panel.webview.postMessage({
+      type: 'updateMacroView',
+      data: macroData,
+      viewMode: 'macro',
+    });
+  }
+
+  /**
+   * ビューモードを切り替え
+   */
+  public switchToMacro(): void {
+    this._currentViewMode = 'macro';
+    this._panel.webview.postMessage({
+      type: 'switchViewMode',
+      viewMode: 'macro',
+    });
+  }
+
+  public switchToMicro(): void {
+    this._currentViewMode = 'micro';
+    this._panel.webview.postMessage({
+      type: 'switchViewMode',
+      viewMode: 'micro',
     });
   }
 
