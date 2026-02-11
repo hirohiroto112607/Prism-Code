@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { TypeScriptParser } from './parsers/typescript/TypeScriptParser';
 import { IRTransformer } from './core/transformer/IRTransformer';
-import { WebViewProvider } from './webview/WebViewProvider';
+import { FlowChartPanel } from './webview/FlowChartPanel';
+import { AIChatViewProvider } from './webview/AIChatViewProvider';
 
 /**
  * 拡張機能のアクティベーション
@@ -9,12 +10,12 @@ import { WebViewProvider } from './webview/WebViewProvider';
 export function activate(context: vscode.ExtensionContext) {
   console.log('LogicFlowBridge が起動しました！');
 
-  // WebView Providerの登録
-  const provider = new WebViewProvider(context.extensionUri);
+  // サイドバーにAIチャットビューを登録
+  const aiChatProvider = new AIChatViewProvider(context.extensionUri);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      WebViewProvider.viewType,
-      provider
+      AIChatViewProvider.viewType,
+      aiChatProvider
     )
   );
 
@@ -61,8 +62,9 @@ export function activate(context: vscode.ExtensionContext) {
           file: filePath,
         });
 
-        // WebViewにIRを送信
-        provider.sendFlowData(ir);
+        // エディタエリアにフローチャートパネルを開く
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateFlowChart(ir);
 
         vscode.window.showInformationMessage(
           `フローチャートを生成しました（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`

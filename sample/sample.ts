@@ -37,3 +37,7 @@ function processData(data: number[]): void {
     i = i + 1;
   }
 }
+console.log(greet('Alice'));
+console.log(calculateSum(10));
+console.log(factorial(5));
+processData([1, 2, 3, 4, 5]);

@@ -35,8 +35,8 @@
       "logicflow-sidebar": [
         {
           "type": "webview",
-          "id": "logicflowbridge.flowView",
-          "name": "フローチャート"
+          "id": "logicflowbridge.aiChat",
+          "name": "AI アシスタント"
         }
       ]
     },

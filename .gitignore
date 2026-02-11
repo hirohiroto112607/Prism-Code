@@ -1,10 +1,56 @@
-node_modules
-out
-.vscode-test/
-*.vsix
-.DS_Store
-# Ignore generated JS in webview source and sample
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Extension側ビルド出力
+out/
+dist/
+
+# WebView UIビルド出力
+webview-ui/build/
+webview-ui/dist/
+webview-ui/node_modules/
+
+# 生成されたJavaScript
 webview-ui/src/**/*.js
 webview-ui/src/**/*.js.map
 sample/*.js
 sample/*.js.map
+
+# VSCode拡張機能
+.vscode-test/
+*.vsix
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# 環境変数
+.env
+.env.local
+.env.production
+.env.development
+
+# ログファイル
+*.log
+logs/
+
+# エディタ
+.idea/
+*.swp
+*.swo
+*~
+
+# テンポラリファイル
+*.tmp
+.cache/
