@@ -7,23 +7,50 @@ import dagre from 'dagre';
  */
 export function convertIRToReactFlow(ir: IR): { nodes: Node[]; edges: Edge[] } {
   const nodes: Node[] = ir.nodes.map((irNode) => convertNodeToReactFlow(irNode));
-  const edges: Edge[] = ir.edges.map((irEdge) => ({
-    id: irEdge.id,
-    source: irEdge.source,
-    target: irEdge.target,
-    label: irEdge.label,
-    type: 'smoothstep',
-    animated: irEdge.label === 'ループ',
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 20,
-      height: 20,
-    },
-    style: {
-      stroke: irEdge.label === 'true' ? '#4ade80' : irEdge.label === 'false' ? '#ef4444' : '#9ca3af',
-      strokeWidth: 2,
-    },
-  }));
+  const edges: Edge[] = ir.edges.map((irEdge) => {
+    const edge: Edge = {
+      id: irEdge.id,
+      source: irEdge.source,
+      target: irEdge.target,
+      label: irEdge.label,
+      type: 'smoothstep',
+      animated: irEdge.label === 'ループ',
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 20,
+        height: 20,
+      },
+      style: {
+        stroke: irEdge.label === 'true' ? '#4ade80' : irEdge.label === 'false' ? '#ef4444' : '#9ca3af',
+        strokeWidth: 2,
+      },
+    };
+
+    // ifノードからのエッジの場合、適切なハンドルを指定
+    if (irEdge.label === 'true') {
+      edge.sourceHandle = 'true';
+    } else if (irEdge.label === 'false') {
+      edge.sourceHandle = 'false';
+    }
+
+    // ループノードからのエッジの場合、適切なハンドルを指定
+    if (irEdge.label === 'ループ継続') {
+      edge.sourceHandle = 'continue';
+      edge.style = { stroke: '#10b981', strokeWidth: 2 };
+    } else if (irEdge.label === 'ループ終了') {
+      edge.sourceHandle = 'exit';
+      edge.style = { stroke: '#ef4444', strokeWidth: 2 };
+    }
+
+    // バックエッジ（ループ本体の最後からループノードへ）
+    if (irEdge.label === 'ループ') {
+      edge.animated = true;
+      edge.style = { stroke: '#14b8a6', strokeWidth: 2 };
+      edge.targetHandle = undefined; // ループノードのtopハンドル（デフォルト）
+    }
+
+    return edge;
+  });
 
   // レイアウトを計算
   const layoutedNodes = calculateLayout(nodes, edges);
@@ -99,18 +126,33 @@ function calculateLayout(nodes: Node[], edges: Edge[]): Node[] {
   const dagreGraph = new dagre.graphlib.Graph();
   dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-  const nodeWidth = 200;
-  const nodeHeight = 100;
+  // ノードタイプに応じたサイズを設定
+  const getNodeSize = (node: Node) => {
+    switch (node.type) {
+      case 'if':
+        return { width: 160, height: 160 };
+      case 'loop':
+        return { width: 200, height: 100 };
+      case 'start':
+      case 'end':
+        return { width: 180, height: 80 };
+      default:
+        return { width: 200, height: 80 };
+    }
+  };
 
   dagreGraph.setGraph({
     rankdir: 'TB', // Top to Bottom
-    nodesep: 80,
-    ranksep: 100,
+    nodesep: 120, // ノード間の水平スペース（増加）
+    ranksep: 150, // ノード間の垂直スペース（増加）
+    edgesep: 50,  // エッジ間のスペース
+    align: 'UL',  // アライメント
   });
 
   // ノードを追加
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: nodeWidth, height: nodeHeight });
+    const size = getNodeSize(node);
+    dagreGraph.setNode(node.id, size);
   });
 
   // エッジを追加
@@ -124,11 +166,12 @@ function calculateLayout(nodes: Node[], edges: Edge[]): Node[] {
   // 計算結果を適用
   return nodes.map((node) => {
     const nodeWithPosition = dagreGraph.node(node.id);
+    const size = getNodeSize(node);
     return {
       ...node,
       position: {
-        x: nodeWithPosition.x - nodeWidth / 2,
-        y: nodeWithPosition.y - nodeHeight / 2,
+        x: nodeWithPosition.x - size.width / 2,
+        y: nodeWithPosition.y - size.height / 2,
       },
     };
   });

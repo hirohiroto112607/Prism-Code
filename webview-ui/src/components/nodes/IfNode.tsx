@@ -10,21 +10,26 @@ export function IfNode({ data }: { data: IfNodeData }) {
       style={{
         padding: '0',
         position: 'relative',
-        minWidth: '150px',
+        width: '160px',
+        height: '160px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      {/* 上部のハンドル（入力） */}
+      <Handle type="target" position={Position.Top} style={{ top: '5px' }} />
 
       {/* ダイヤモンド型の背景 */}
       <div
         style={{
-          width: '120px',
-          height: '120px',
+          width: '130px',
+          height: '130px',
           background: '#f472b6',
           border: '2px solid #ec4899',
           transform: 'rotate(45deg)',
           position: 'absolute',
-          top: '-10px',
+          top: '15px',
           left: '15px',
         }}
       />
@@ -33,29 +38,32 @@ export function IfNode({ data }: { data: IfNodeData }) {
       <div
         style={{
           position: 'relative',
-          padding: '40px 20px',
           color: '#fff',
           fontWeight: 'bold',
           textAlign: 'center',
           fontSize: '13px',
           wordBreak: 'break-word',
+          maxWidth: '90px',
+          zIndex: 1,
         }}
       >
         {data.condition}
       </div>
 
-      {/* True/False用のハンドル */}
+      {/* True用のハンドル（下部左寄り） */}
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         id="true"
-        style={{ top: '50%', right: '-10px' }}
+        style={{ left: '30%', background: '#10b981' }}
       />
+
+      {/* False用のハンドル（下部右寄り） */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="false"
-        style={{ bottom: '-10px' }}
+        style={{ left: '70%', background: '#ef4444' }}
       />
     </div>
   );

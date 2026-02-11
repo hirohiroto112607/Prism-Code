@@ -36,7 +36,7 @@ pnpm run compile:webview
 3. 新しいVSCodeウィンドウが開く
 4. サイドバーの**LogicFlowアイコン**をクリック
 5. TypeScriptファイルを開く（例: `sample/sample.ts`）
-6. コマンドパレット（**Cmd+Shift+P**）→ `LogicFlow: コードを可視化` を実行
+6. コマンドパレット（**Cmd+Shift+P**）または右クリックメニューで `LogicFlow: コードを可視化` を実行
 
 ### 4. フローチャートの確認
 

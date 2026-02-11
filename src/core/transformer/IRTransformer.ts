@@ -40,12 +40,12 @@ export class IRTransformer {
 
   /**
    * ASTノードをIRノードに変換
-   * @returns 変換されたノードのID
+   * @returns 変換されたノードの出口IDのリスト（制御フローの末端）
    */
-  private transformNode(astNode: ASTNode): string {
+  private transformNode(astNode: ASTNode): string[] {
     switch (astNode.type) {
       case 'FunctionDeclaration':
-        return this.transformFunction(astNode);
+        return [this.transformFunction(astNode)];
       case 'IfStatement':
         return this.transformIf(astNode);
       case 'ForStatement':
@@ -53,14 +53,14 @@ export class IRTransformer {
       case 'WhileStatement':
         return this.transformWhile(astNode);
       case 'VariableDeclaration':
-        return this.transformVariable(astNode);
+        return [this.transformVariable(astNode)];
       case 'ReturnStatement':
-        return this.transformReturn(astNode);
+        return [this.transformReturn(astNode)];
       case 'ExpressionStatement':
-        return this.transformExpression(astNode);
+        return [this.transformExpression(astNode)];
       default:
         console.warn('未対応のノード型:', astNode);
-        return this.generateNodeId();
+        return [this.generateNodeId()];
     }
   }
 
@@ -79,10 +79,20 @@ export class IRTransformer {
     });
 
     // 関数本体のノードを変換
-    const bodyIds: string[] = [];
+    let currentExits: string[] = [startId]; // 現在の出口ノード（次の文の入口になる）
+
     for (const stmt of fn.body) {
-      const nodeId = this.transformNode(stmt);
-      bodyIds.push(nodeId);
+      const result = this.transformNode(stmt); // [entryId, ...exitIds]
+      const entryId = result[0]; // このノードの入口ID
+      const exitIds = result.length > 1 ? result.slice(1) : [entryId]; // 出口ID（なければ入口IDを使用）
+
+      // 前の出口から現在の入口に接続
+      for (const exitId of currentExits) {
+        this.addEdge(exitId, entryId);
+      }
+
+      // 現在の出口を更新
+      currentExits = exitIds;
     }
 
     // 終了ノード
@@ -92,21 +102,9 @@ export class IRTransformer {
       label: `関数終了: ${fn.name}`,
     });
 
-    // エッジを接続
-    if (bodyIds.length > 0) {
-      // 開始 → 最初のノード
-      this.addEdge(startId, bodyIds[0]);
-
-      // ノード間を順次接続
-      for (let i = 0; i < bodyIds.length - 1; i++) {
-        this.addEdge(bodyIds[i], bodyIds[i + 1]);
-      }
-
-      // 最後のノード → 終了
-      this.addEdge(bodyIds[bodyIds.length - 1], endId);
-    } else {
-      // 本体が空の場合は直接接続
-      this.addEdge(startId, endId);
+    // 最後の出口から終了ノードへ接続
+    for (const exitId of currentExits) {
+      this.addEdge(exitId, endId);
     }
 
     return startId;
@@ -114,26 +112,10 @@ export class IRTransformer {
 
   /**
    * If文を変換
+   * @returns [入口ID（ifノード）, ...出口IDのリスト（then/else分岐の末端）]
    */
-  private transformIf(ifNode: any): string {
+  private transformIf(ifNode: any): string[] {
     const nodeId = this.generateNodeId();
-    const mergeId = this.generateNodeId(); // 分岐の合流点
-
-    // Then分岐のノードを変換
-    const thenIds: string[] = [];
-    for (const stmt of ifNode.thenBranch) {
-      const id = this.transformNode(stmt);
-      thenIds.push(id);
-    }
-
-    // Else分岐のノードを変換
-    const elseIds: string[] = [];
-    if (ifNode.elseBranch) {
-      for (const stmt of ifNode.elseBranch) {
-        const id = this.transformNode(stmt);
-        elseIds.push(id);
-      }
-    }
 
     // 制御フローノードを追加
     this.nodes.push({
@@ -141,61 +123,70 @@ export class IRTransformer {
       type: 'if',
       condition: ifNode.condition,
       branches: {
-        then: thenIds,
-        else: elseIds,
+        then: [],
+        else: [],
       },
       location: ifNode.location,
     });
 
-    // 合流ノードを追加（プロセスノードとして）
-    this.nodes.push({
-      id: mergeId,
-      type: 'expression',
-      label: '合流',
-      location: ifNode.location,
-    });
+    // Then分岐のノードを変換
+    let thenExits: string[] = [nodeId]; // then分岐の出口（デフォルトはifノード自体）
+    if (ifNode.thenBranch && ifNode.thenBranch.length > 0) {
+      let currentExits = [nodeId];
+      let isFirst = true;
 
-    // エッジを接続
-    if (thenIds.length > 0) {
-      this.addEdge(nodeId, thenIds[0], 'true');
-      // Then分岐内を接続
-      for (let i = 0; i < thenIds.length - 1; i++) {
-        this.addEdge(thenIds[i], thenIds[i + 1]);
+      for (const stmt of ifNode.thenBranch) {
+        const result = this.transformNode(stmt);
+        const entryId = result[0];
+        const exitIds = result.length > 1 ? result.slice(1) : [entryId];
+
+        // 前の出口から現在の入口に接続
+        for (const exitId of currentExits) {
+          this.addEdge(exitId, entryId, isFirst ? 'true' : undefined);
+        }
+
+        currentExits = exitIds;
+        isFirst = false;
       }
-      // Then分岐の最後 → 合流
-      this.addEdge(thenIds[thenIds.length - 1], mergeId);
-    } else {
-      this.addEdge(nodeId, mergeId, 'true');
+      thenExits = currentExits;
     }
 
-    if (elseIds.length > 0) {
-      this.addEdge(nodeId, elseIds[0], 'false');
-      // Else分岐内を接続
-      for (let i = 0; i < elseIds.length - 1; i++) {
-        this.addEdge(elseIds[i], elseIds[i + 1]);
+    // Else分岐のノードを変換
+    let elseExits: string[] = [nodeId]; // else分岐の出口（デフォルトはifノード自体）
+    if (ifNode.elseBranch && ifNode.elseBranch.length > 0) {
+      let currentExits = [nodeId];
+      let isFirst = true;
+
+      for (const stmt of ifNode.elseBranch) {
+        const result = this.transformNode(stmt);
+        const entryId = result[0];
+        const exitIds = result.length > 1 ? result.slice(1) : [entryId];
+
+        // 前の出口から現在の入口に接続
+        for (const exitId of currentExits) {
+          this.addEdge(exitId, entryId, isFirst ? 'false' : undefined);
+        }
+
+        currentExits = exitIds;
+        isFirst = false;
       }
-      // Else分岐の最後 → 合流
-      this.addEdge(elseIds[elseIds.length - 1], mergeId);
-    } else {
-      this.addEdge(nodeId, mergeId, 'false');
+      elseExits = currentExits;
     }
 
-    return nodeId;
+    // 入口ID + 両方の分岐の出口IDを返す
+    // 出口がifノード自体の場合は除外（空の分岐を除く）
+    const allExits = [...thenExits, ...elseExits];
+    const uniqueExits = Array.from(new Set(allExits)); // 重複を除去
+
+    return [nodeId, ...uniqueExits];
   }
 
   /**
    * For文を変換
+   * @returns [入口ID（ループノード）, 出口ID（ループ終了時、ループノード自体）]
    */
-  private transformFor(forNode: any): string {
+  private transformFor(forNode: any): string[] {
     const nodeId = this.generateNodeId();
-    const exitId = this.generateNodeId(); // ループ終了後のノード
-
-    // ループ本体のノードを変換
-    const bodyIds: string[] = [];
-    for (const stmt of forNode.body) {
-      const id = this.transformNode(stmt);
-      bodyIds.push(id);
-    }
 
     // 制御フローノードを追加
     this.nodes.push({
@@ -203,49 +194,42 @@ export class IRTransformer {
       type: 'for',
       condition: forNode.condition,
       branches: {
-        body: bodyIds,
+        body: [],
       },
       location: forNode.location,
     });
 
-    // ループ終了ノード
-    this.nodes.push({
-      id: exitId,
-      type: 'expression',
-      label: 'ループ終了',
-      location: forNode.location,
-    });
+    // ループ本体のノードを変換
+    if (forNode.body && forNode.body.length > 0) {
+      let currentExits = [nodeId];
+      for (const stmt of forNode.body) {
+        const stmtExits = this.transformNode(stmt);
+        const entryId = stmtExits[0];
 
-    // エッジを接続
-    if (bodyIds.length > 0) {
-      this.addEdge(nodeId, bodyIds[0], 'ループ継続');
-      // ループ本体内を接続
-      for (let i = 0; i < bodyIds.length - 1; i++) {
-        this.addEdge(bodyIds[i], bodyIds[i + 1]);
+        // 前の出口から現在の入口に接続
+        for (const exitId of currentExits) {
+          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'ループ継続' : undefined);
+        }
+
+        currentExits = stmtExits;
       }
-      // ループ本体の最後 → ループ開始（バックエッジ）
-      this.addEdge(bodyIds[bodyIds.length - 1], nodeId, 'ループ');
+
+      // ループ本体の最後からループ開始へのバックエッジ
+      for (const exitId of currentExits) {
+        this.addEdge(exitId, nodeId, 'ループ');
+      }
     }
 
-    // ループ終了条件 → 終了ノード
-    this.addEdge(nodeId, exitId, 'ループ終了');
-
-    return nodeId;
+    // 入口と出口は同じ（ループノード自体）
+    return [nodeId, nodeId];
   }
 
   /**
    * While文を変換
+   * @returns [入口ID（ループノード）, 出口ID（ループ終了時、ループノード自体）]
    */
-  private transformWhile(whileNode: any): string {
+  private transformWhile(whileNode: any): string[] {
     const nodeId = this.generateNodeId();
-    const exitId = this.generateNodeId();
-
-    // ループ本体のノードを変換
-    const bodyIds: string[] = [];
-    for (const stmt of whileNode.body) {
-      const id = this.transformNode(stmt);
-      bodyIds.push(id);
-    }
 
     // 制御フローノードを追加
     this.nodes.push({
@@ -253,34 +237,34 @@ export class IRTransformer {
       type: 'while',
       condition: whileNode.condition,
       branches: {
-        body: bodyIds,
+        body: [],
       },
       location: whileNode.location,
     });
 
-    // ループ終了ノード
-    this.nodes.push({
-      id: exitId,
-      type: 'expression',
-      label: 'ループ終了',
-      location: whileNode.location,
-    });
+    // ループ本体のノードを変換
+    if (whileNode.body && whileNode.body.length > 0) {
+      let currentExits = [nodeId];
+      for (const stmt of whileNode.body) {
+        const stmtExits = this.transformNode(stmt);
+        const entryId = stmtExits[0];
 
-    // エッジを接続
-    if (bodyIds.length > 0) {
-      this.addEdge(nodeId, bodyIds[0], 'true');
-      // ループ本体内を接続
-      for (let i = 0; i < bodyIds.length - 1; i++) {
-        this.addEdge(bodyIds[i], bodyIds[i + 1]);
+        // 前の出口から現在の入口に接続
+        for (const exitId of currentExits) {
+          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'true' : undefined);
+        }
+
+        currentExits = stmtExits;
       }
-      // ループ本体の最後 → ループ開始
-      this.addEdge(bodyIds[bodyIds.length - 1], nodeId, 'ループ');
+
+      // ループ本体の最後からループ開始へのバックエッジ
+      for (const exitId of currentExits) {
+        this.addEdge(exitId, nodeId, 'ループ');
+      }
     }
 
-    // ループ終了
-    this.addEdge(nodeId, exitId, 'false');
-
-    return nodeId;
+    // 入口と出口は同じ（ループノード自体）
+    return [nodeId, nodeId];
   }
 
   /**
