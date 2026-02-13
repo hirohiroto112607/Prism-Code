@@ -24,11 +24,14 @@ export function activate(context: vscode.ExtensionContext) {
   const visualizeCommand = vscode.commands.registerCommand(
     'prismcode.visualize',
     async () => {
+      console.log('🚀 Visualize command executed');
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
+        console.error('❌ No active editor');
         vscode.window.showErrorMessage('アクティブなエディタがありません');
         return;
       }
+      console.log('✅ Active editor found:', editor.document.fileName);
 
       const document = editor.document;
       const languageId = document.languageId;
@@ -47,34 +50,49 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       try {
+        console.log('📝 Getting source code...');
         // ソースコードを取得
         const code = document.getText();
         const filePath = document.fileName;
+        console.log('📝 Code length:', code.length);
 
         // パーサーでASTを生成
         vscode.window.showInformationMessage('コードを解析中...');
+        console.log('🔍 Parsing code...');
         const parser = new TypeScriptParser();
         const ast = parser.parse(code, filePath);
+        console.log('✅ AST generated:', ast.body.length, 'nodes');
 
         // ASTをIRに変換
+        console.log('🔄 Transforming to IR...');
         const transformer = new IRTransformer();
         const ir = transformer.transform(ast, {
           language: parser.getSupportedLanguage(),
           file: filePath,
         });
+        console.log('✅ IR generated:', {
+          nodes: ir.nodes.length,
+          edges: ir.edges.length
+        });
 
         // エディタエリアにフローチャートパネルを開く
+        console.log('🎨 Creating/showing FlowChartPanel...');
         const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        console.log('✅ Panel created/shown');
+
+        console.log('📤 Updating flowchart...');
         panel.updateFlowChart(ir);
+        console.log('✅ Flowchart updated');
 
         vscode.window.showInformationMessage(
           `フローチャートを生成しました（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`
         );
       } catch (error: any) {
+        console.error('❌ Visualization error:', error);
+        console.error('Stack trace:', error.stack);
         vscode.window.showErrorMessage(
           `エラーが発生しました: ${error.message}`
         );
-        console.error('可視化エラー:', error);
       }
     }
   );

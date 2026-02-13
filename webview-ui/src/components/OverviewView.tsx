@@ -1,15 +1,5 @@
 import { MacroViewData } from '../types/ir';
-
-// VSCode WebView APIの型定義
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => {
-      postMessage: (message: any) => void;
-    };
-  }
-}
-
-const vscode = window.acquireVsCodeApi();
+import { vscode } from '../vscode-api';
 
 interface OverviewViewProps {
   data: MacroViewData;

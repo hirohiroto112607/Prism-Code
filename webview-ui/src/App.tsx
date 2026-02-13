@@ -5,14 +5,9 @@ import { OverviewView } from './components/OverviewView';
 import { IR, MacroViewData } from './types/ir';
 import { convertIRToReactFlow } from './utils/flowConverter';
 import { Node, Edge } from 'reactflow';
+import { vscode } from './vscode-api';
 
 type ViewMode = 'micro' | 'macro' | 'overview';
-
-const vscode = (window as any).acquireVsCodeApi?.() ?? {
-  postMessage: (_: any) => {},
-  getState: () => undefined,
-  setState: (_: any) => {},
-};
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('micro');
@@ -31,61 +26,76 @@ function App() {
     // Extension側からのメッセージを受信
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
+      console.log('📨 Message received in App:', message.type, message);
 
       switch (message.type) {
         case 'updateFlow': {
           try {
             const ir: IR = message.data;
-            console.log('updateFlow received:', ir);
+            console.log('✅ updateFlow received:', {
+              nodes: ir.nodes?.length,
+              edges: ir.edges?.length,
+              data: ir
+            });
             const { nodes: flowNodes, edges: flowEdges } = convertIRToReactFlow(ir);
-            console.log('Converted nodes:', flowNodes.length, 'edges:', flowEdges.length);
+            console.log('✅ Converted to React Flow:', {
+              nodes: flowNodes.length,
+              edges: flowEdges.length
+            });
             setNodes(flowNodes);
             setEdges(flowEdges);
             setViewMode('micro');
             setError(null);
+            console.log('✅ State updated successfully');
           } catch (err: any) {
             setError(err.message);
-            console.error('フロー変換エラー:', err);
+            console.error('❌ フロー変換エラー:', err);
+            console.error('Stack:', err.stack);
           }
           break;
         }
         case 'updateMacroView': {
           try {
             const data: MacroViewData = message.data;
-            console.log('updateMacroView received:', data);
+            console.log('✅ updateMacroView received:', data);
             setMacroData(data);
             setViewMode('macro');
             setError(null);
           } catch (err: any) {
             setError(err.message);
-            console.error('マクロビュー変換エラー:', err);
+            console.error('❌ マクロビュー変換エラー:', err);
           }
           break;
         }
         case 'updateOverviewView': {
           try {
             const data: MacroViewData = message.data;
-            console.log('updateOverviewView received:', data);
+            console.log('✅ updateOverviewView received:', data);
             setOverviewData(data);
             setViewMode('overview');
             setError(null);
           } catch (err: any) {
             setError(err.message);
-            console.error('概要ビュー変換エラー:', err);
+            console.error('❌ 概要ビュー変換エラー:', err);
           }
           break;
         }
         case 'switchViewMode': {
+          console.log('✅ switchViewMode to:', message.viewMode);
           setViewMode(message.viewMode);
           break;
         }
+        default:
+          console.log('⚠️  Unknown message type:', message.type);
       }
     };
 
     window.addEventListener('message', handleMessage);
+    console.log('📡 Message listener registered in App');
 
     return () => {
       window.removeEventListener('message', handleMessage);
+      console.log('📡 Message listener unregistered');
     };
   }, []);
 

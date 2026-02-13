@@ -10,11 +10,7 @@
     "Visualization",
     "Programming Languages"
   ],
-  "activationEvents": [
-    "prismcode.aiChat",
-    "onLanguage:typescript",
-    "onLanguage:typescriptreact"
-  ],
+  "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
     "commands": [
@@ -45,7 +41,8 @@
         {
           "type": "webview",
           "id": "prismcode.aiChat",
-          "name": "AI アシスタント"
+          "name": "AI アシスタント",
+          "icon": "media/icon.svg"
         }
       ]
     },
@@ -67,6 +64,10 @@
           "group": "prismcode@2"
         }
       ]
+    },
+    "configuration": {
+      "title": "Prism Code",
+      "properties": {}
     }
   },
   "scripts": {

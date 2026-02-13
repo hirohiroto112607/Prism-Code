@@ -10,17 +10,7 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
-// VSCode WebView APIの型定義
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => {
-      postMessage: (message: any) => void;
-    };
-  }
-}
-
-const vscode = window.acquireVsCodeApi();
+import { vscode } from '../vscode-api';
 
 interface MacroViewProps {
   // 将来的にAIから受け取るデータの型

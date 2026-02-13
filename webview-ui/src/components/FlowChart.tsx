@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect } from 'react';
 import ReactFlow, {
   Controls,
   Background,
@@ -11,18 +11,7 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-
-// VSCode WebView APIの型定義
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => {
-      postMessage: (message: any) => void;
-    };
-  }
-}
-
-const vscode = window.acquireVsCodeApi();
-
+import { vscode } from '../vscode-api';
 import { StartNode } from './nodes/StartNode';
 import { EndNode } from './nodes/EndNode';
 import { ProcessNode } from './nodes/ProcessNode';
@@ -35,7 +24,7 @@ interface FlowChartProps {
 }
 
 export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChartProps) {
-  console.log('FlowChart component rendered with:', {
+  console.log('📊 FlowChart component rendered with:', {
     nodes: initialNodes.length,
     edges: initialEdges.length,
     firstNode: initialNodes[0]
@@ -52,10 +41,20 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
     []
   );
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  console.log('FlowChart state:', {
+  // propsが更新されたらstateも更新
+  useEffect(() => {
+    console.log('📥 Updating nodes/edges from props:', {
+      nodes: initialNodes.length,
+      edges: initialEdges.length
+    });
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [initialNodes, initialEdges, setNodes, setEdges]);
+
+  console.log('📊 FlowChart state:', {
     nodes: nodes.length,
     edges: edges.length
   });
