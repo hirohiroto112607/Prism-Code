@@ -8,18 +8,11 @@ import { Node, Edge } from 'reactflow';
 
 type ViewMode = 'micro' | 'macro' | 'overview';
 
-// VSCode WebView APIの型定義
-declare global {
-  interface Window {
-    acquireVsCodeApi: () => {
-      postMessage: (message: any) => void;
-      getState: () => any;
-      setState: (state: any) => void;
-    };
-  }
-}
-
-const vscode = window.acquireVsCodeApi();
+const vscode = (window as any).acquireVsCodeApi?.() ?? {
+  postMessage: (_: any) => {},
+  getState: () => undefined,
+  setState: (_: any) => {},
+};
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('micro');
