@@ -1,4 +1,4 @@
-# LogicFlowBridge
+# Prism Code
 
 TypeScriptコードをインタラクティブなフローチャートで視覚化するVSCode拡張機能
 
@@ -34,9 +34,9 @@ pnpm run compile:webview
 1. VSCodeでこのプロジェクトを開く
 2. **F5キー**を押してデバッグを開始
 3. 新しいVSCodeウィンドウが開く
-4. サイドバーの**LogicFlowアイコン**をクリック
+4. サイドバーの**Prism Codeアイコン**をクリック
 5. TypeScriptファイルを開く（例: `sample/sample.ts`）
-6. コマンドパレット（**Cmd+Shift+P**）または右クリックメニューで `LogicFlow: コードを可視化` を実行
+6. コマンドパレット（**Cmd+Shift+P**）または右クリックメニューで `Prism Code: コードを可視化` を実行
 
 ### 4. フローチャートの確認
 

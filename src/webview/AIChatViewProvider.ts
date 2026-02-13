@@ -5,7 +5,7 @@ import * as vscode from 'vscode';
  * Phase 3でGemini API統合予定
  */
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'logicflowbridge.aiChat';
+  public static readonly viewType = 'prismcode.aiChat';
 
   private _view?: vscode.WebviewView;
 
@@ -36,10 +36,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
           this._handleUserMessage(message.text);
           break;
         case 'switchToMacro':
-          vscode.commands.executeCommand('logicflowbridge.switchToMacro');
+          vscode.commands.executeCommand('prismcode.switchToMacro');
           break;
         case 'switchToMicro':
-          vscode.commands.executeCommand('logicflowbridge.switchToMicro');
+          vscode.commands.executeCommand('prismcode.switchToMicro');
           break;
       }
     });

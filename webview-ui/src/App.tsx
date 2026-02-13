@@ -149,7 +149,7 @@ function App() {
     >
       <div style={{ textAlign: 'center' }}>
         <h3 style={{ color: '#60a5fa', marginBottom: '10px' }}>
-          📊 LogicFlowBridge
+          📊 Prism Code
         </h3>
         <p style={{ marginBottom: '20px' }}>
           TypeScriptファイルを開いて、下のボタンをクリックしてください
@@ -190,7 +190,7 @@ function App() {
           marginTop: '10px',
         }}
       >
-        または Cmd+Shift+P →「LogicFlow: コードを可視化」
+        または Cmd+Shift+P →「Prism Code: コードを可視化」
       </div>
     </div>
   );

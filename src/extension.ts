@@ -9,7 +9,7 @@ import { AIChatViewProvider } from './webview/AIChatViewProvider';
  * 拡張機能のアクティベーション
  */
 export function activate(context: vscode.ExtensionContext) {
-  console.log('LogicFlowBridge が起動しました！');
+  console.log('Prism Code が起動しました！');
 
   // サイドバーにAIチャットビューを登録
   const aiChatProvider = new AIChatViewProvider(context.extensionUri);
@@ -22,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // Visualizeコマンドの登録
   const visualizeCommand = vscode.commands.registerCommand(
-    'logicflowbridge.visualize',
+    'prismcode.visualize',
     async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
@@ -83,7 +83,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // マクロビュー切り替えコマンド
   const switchToMacroCommand = vscode.commands.registerCommand(
-    'logicflowbridge.switchToMacro',
+    'prismcode.switchToMacro',
     async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
@@ -139,7 +139,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   // ミクロビュー切り替えコマンド
   const switchToMicroCommand = vscode.commands.registerCommand(
-    'logicflowbridge.switchToMicro',
+    'prismcode.switchToMicro',
     async () => {
       const editor = vscode.window.activeTextEditor;
       if (!editor) {
@@ -200,5 +200,5 @@ export function activate(context: vscode.ExtensionContext) {
  * 拡張機能の非アクティベーション
  */
 export function deactivate() {
-  console.log('LogicFlowBridge が停止しました');
+  console.log('Prism Code が停止しました');
 }

@@ -1,7 +1,7 @@
 {
-  "name": "logicflow-bridge",
-  "displayName": "LogicFlowBridge",
-  "description": "TypeScriptコードをフローチャートで視覚化するVSCode拡張機能",
+  "name": "prism-code",
+  "displayName": "Prism Code",
+  "description": "コードを視覚化するVSCode拡張機能",
   "version": "0.0.1",
   "engines": {
     "vscode": "^1.85.0"
@@ -18,32 +18,32 @@
   "contributes": {
     "commands": [
       {
-        "command": "logicflowbridge.visualize",
-        "title": "LogicFlow: コードを可視化"
+        "command": "prismcode.visualize",
+        "title": "Prism Code: コードを可視化"
       },
       {
-        "command": "logicflowbridge.switchToMacro",
-        "title": "LogicFlowBridge: マクロビュー(俯瞰)"
+        "command": "prismcode.switchToMacro",
+        "title": "Prism Code: マクロビュー(俯瞰)"
       },
       {
-        "command": "logicflowbridge.switchToMicro",
-        "title": "LogicFlowBridge: ミクロビュー(詳細)"
+        "command": "prismcode.switchToMicro",
+        "title": "Prism Code: ミクロビュー(詳細)"
       }
     ],
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "logicflow-sidebar",
-          "title": "LogicFlow",
+          "id": "prismcode-sidebar",
+          "title": "Prism Code",
           "icon": "media/icon.svg"
         }
       ]
     },
     "views": {
-      "logicflow-sidebar": [
+      "prismcode-sidebar": [
         {
           "type": "webview",
-          "id": "logicflowbridge.aiChat",
+          "id": "prismcode.aiChat",
           "name": "AI アシスタント"
         }
       ]
@@ -52,18 +52,18 @@
       "editor/context": [
         {
           "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
-          "command": "logicflowbridge.visualize",
+          "command": "prismcode.visualize",
           "group": "navigation"
         },
         {
           "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
-          "command": "logicflowbridge.switchToMacro",
-          "group": "logicflow@1"
+          "command": "prismcode.switchToMacro",
+          "group": "prismcode@1"
         },
         {
           "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
-          "command": "logicflowbridge.switchToMicro",
-          "group": "logicflow@2"
+          "command": "prismcode.switchToMicro",
+          "group": "prismcode@2"
         }
       ]
     }

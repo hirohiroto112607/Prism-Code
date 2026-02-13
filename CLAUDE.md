@@ -1,6 +1,6 @@
-# LogicFlowBridge - Claude開発ガイド
+# Prism Code - Claude開発ガイド
 
-このドキュメントは、LogicFlowBridgeプロジェクトの全体像、アーキテクチャ、実装の詳細を記述したものです。Claude（AI）がこのプロジェクトを理解し、効果的に開発支援を行うためのリファレンスとして機能します。
+このドキュメントは、Prism Codeプロジェクトの全体像、アーキテクチャ、実装の詳細を記述したものです。Claude（AI）がこのプロジェクトを理解し、効果的に開発支援を行うためのリファレンスとして機能します。
 
 ---
 
@@ -23,7 +23,7 @@
 
 ### 1.1 目的
 
-LogicFlowBridgeは、**TypeScript/JavaScriptコードをインタラクティブなフローチャートとして視覚化する**VSCode拡張機能です。プログラムの制御フローを直感的に理解し、コードの構造を一目で把握できるようにすることを目指しています。
+Prism Codeは、**TypeScript/JavaScriptコードをインタラクティブなフローチャートとして視覚化する**VSCode拡張機能です。プログラムの制御フローを直感的に理解し、コードの構造を一目で把握できるようにすることを目指しています。
 
 ### 1.2 コンセプト
 
@@ -47,7 +47,7 @@ LogicFlowBridgeは、**TypeScript/JavaScriptコードをインタラクティブ
 ## 2. ディレクトリ構造
 
 ```
-LogicFlowBridge/
+Prism Code/
 ├── .vscode/                      # VSCode設定
 │   ├── launch.json               # デバッグ設定
 │   └── tasks.json                # ビルドタスク
@@ -493,7 +493,7 @@ class WebViewProvider implements vscode.WebviewViewProvider {
     // WebViewからのメッセージを受信
     webviewView.webview.onDidReceiveMessage((message) => {
       if (message.type === 'visualize') {
-        vscode.commands.executeCommand('logicflowbridge.visualize');
+        vscode.commands.executeCommand('prismcode.visualize');
       }
     });
   }
@@ -538,7 +538,7 @@ cd webview-ui && pnpm run dev
 
 1. VSCodeで`F5`キーを押す
 2. 新しいVSCodeウィンドウが開く（Extension Development Host）
-3. サイドバーのLogicFlowアイコンをクリック
+3. サイドバーのPrismCodeアイコンをクリック
 4. TypeScriptファイルを開く（`sample/sample.ts`）
 5. サイドバーの「🔍 現在のファイルを可視化」ボタンをクリック
 
@@ -777,7 +777,7 @@ this.project = new Project({
 
 ```typescript
 // src/extension.ts
-console.log('LogicFlowBridge が起動しました！');
+console.log('Prism Code が起動しました！');
 console.error('可視化エラー:', error);
 ```
 
@@ -888,7 +888,7 @@ console.log('フロー変換エラー:', err);
 
 ## 13. まとめ
 
-LogicFlowBridgeは、**疎結合な設計**と**レイヤードアーキテクチャ**により、将来的な拡張性を確保しています。現在はPhase 1（コア機能）が完成し、インタラクティブなフローチャート表示が実現されています。
+Prism Codeは、**疎結合な設計**と**レイヤードアーキテクチャ**により、将来的な拡張性を確保しています。現在はPhase 1（コア機能）が完成し、インタラクティブなフローチャート表示が実現されています。
 
 今後のPhase 2, 3では、より高度なインタラクティブ性とAI統合を実現し、プログラミング学習やコードレビューのための強力なツールへと進化させていきます。
 

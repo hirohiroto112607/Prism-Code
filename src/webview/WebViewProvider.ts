@@ -5,7 +5,7 @@ import { IR } from '../core/ir/IR';
  * WebViewを管理するプロバイダー
  */
 export class WebViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'logicflowbridge.flowView';
+  public static readonly viewType = 'prismcode.flowView';
 
   private _view?: vscode.WebviewView;
 
@@ -33,7 +33,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
       switch (message.type) {
         case 'visualize':
           // 可視化コマンドを実行
-          vscode.commands.executeCommand('logicflowbridge.visualize');
+          vscode.commands.executeCommand('prismcode.visualize');
           break;
         case 'switchViewMode':
           // ビュー切替
@@ -55,7 +55,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
       });
     } else {
       vscode.window.showErrorMessage(
-        'フロービューが開かれていません。サイドバーの「LogicFlow」を開いてください。'
+        'フロービューが開かれていません。サイドバーの「Prism Code」を開いてください。'
       );
     }
   }
@@ -119,7 +119,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
     <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}';" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link href="${styleUri}" rel="stylesheet" />
-    <title>LogicFlowBridge</title>
+    <title>Prism Code</title>
   </head>
   <body>
     <div id="root"></div>

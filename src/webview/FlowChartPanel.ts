@@ -6,7 +6,7 @@ import { IR, MacroViewData } from '../core/ir/IR';
  */
 export class FlowChartPanel {
   public static currentPanel: FlowChartPanel | undefined;
-  private static readonly viewType = 'logicflowbridge.flowchart';
+  private static readonly viewType = 'prismcode.flowchart';
 
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
