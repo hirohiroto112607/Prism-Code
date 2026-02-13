@@ -8,8 +8,20 @@ import ReactFlow, {
   useNodesState,
   useEdgesState,
   BackgroundVariant,
+  Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
+
+// VSCode WebView APIの型定義
+declare global {
+  interface Window {
+    acquireVsCodeApi: () => {
+      postMessage: (message: any) => void;
+    };
+  }
+}
+
+const vscode = window.acquireVsCodeApi();
 
 import { StartNode } from './nodes/StartNode';
 import { EndNode } from './nodes/EndNode';
@@ -42,6 +54,14 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
     // 将来的には、ノードクリックでソースコードへジャンプ
   }, []);
 
+  const switchToMacroView = useCallback(() => {
+    vscode.postMessage({ type: 'switchViewMode', viewMode: 'macro' });
+  }, []);
+
+  const switchToOverviewView = useCallback(() => {
+    vscode.postMessage({ type: 'switchViewMode', viewMode: 'overview' });
+  }, []);
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#1e1e1e' }}>
       <ReactFlow
@@ -72,6 +92,64 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
           }}
         />
         <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+
+        {/* ビュー切替パネル */}
+        <Panel position="top-right">
+          <div
+            style={{
+              background: 'rgba(30, 30, 30, 0.95)',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #667eea',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#667eea',
+                marginBottom: '4px',
+              }}
+            >
+              ビュー切替
+            </div>
+            <button
+              onClick={switchToMacroView}
+              style={{
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#fff',
+                background: '#667eea',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🔭 マクロビュー
+            </button>
+            <button
+              onClick={switchToOverviewView}
+              style={{
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#fff',
+                background: '#764ba2',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              📊 概要ビュー
+            </button>
+          </div>
+        </Panel>
       </ReactFlow>
     </div>
   );

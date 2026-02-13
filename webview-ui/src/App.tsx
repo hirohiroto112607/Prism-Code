@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { FlowChart } from './components/FlowChart';
 import { MacroView } from './components/MacroView';
+import { OverviewView } from './components/OverviewView';
 import { IR, MacroViewData } from './types/ir';
 import { convertIRToReactFlow } from './utils/flowConverter';
 import { Node, Edge } from 'reactflow';
 
-type ViewMode = 'micro' | 'macro';
+type ViewMode = 'micro' | 'macro' | 'overview';
 
 // VSCode WebView APIの型定義
 declare global {
@@ -25,6 +26,7 @@ function App() {
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
   const [macroData, setMacroData] = useState<MacroViewData | null>(null);
+  const [overviewData, setOverviewData] = useState<MacroViewData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 可視化ボタンのクリックハンドラ
@@ -61,6 +63,18 @@ function App() {
           } catch (err: any) {
             setError(err.message);
             console.error('マクロビュー変換エラー:', err);
+          }
+          break;
+        }
+        case 'updateOverviewView': {
+          try {
+            const data: MacroViewData = message.data;
+            setOverviewData(data);
+            setViewMode('overview');
+            setError(null);
+          } catch (err: any) {
+            setError(err.message);
+            console.error('概要ビュー変換エラー:', err);
           }
           break;
         }
@@ -101,9 +115,14 @@ function App() {
     );
   }
 
-  // マクロビューの表示
-  if (viewMode === 'macro' && macroData) {
+  // マクロビューの表示（機能単位）
+  if (viewMode === 'macro') {
     return <MacroView data={macroData} />;
+  }
+
+  // 概要ビューの表示
+  if (viewMode === 'overview' && overviewData) {
+    return <OverviewView data={overviewData} />;
   }
 
   // ミクロビューの表示

@@ -35,6 +35,10 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
           // 可視化コマンドを実行
           vscode.commands.executeCommand('logicflowbridge.visualize');
           break;
+        case 'switchViewMode':
+          // ビュー切替
+          this.switchViewMode(message.viewMode);
+          break;
       }
     });
   }
@@ -53,6 +57,44 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
       vscode.window.showErrorMessage(
         'フロービューが開かれていません。サイドバーの「LogicFlow」を開いてください。'
       );
+    }
+  }
+
+  /**
+   * マクロビューデータをWebViewに送信
+   */
+  public sendMacroViewData(data: any): void {
+    if (this._view) {
+      this._view.show?.(true);
+      this._view.webview.postMessage({
+        type: 'updateMacroView',
+        data: data,
+      });
+    }
+  }
+
+  /**
+   * 概要ビューデータをWebViewに送信
+   */
+  public sendOverviewData(data: any): void {
+    if (this._view) {
+      this._view.show?.(true);
+      this._view.webview.postMessage({
+        type: 'updateOverviewView',
+        data: data,
+      });
+    }
+  }
+
+  /**
+   * ビュー切替
+   */
+  public switchViewMode(viewMode: 'micro' | 'macro' | 'overview'): void {
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: 'switchViewMode',
+        viewMode: viewMode,
+      });
     }
   }
 

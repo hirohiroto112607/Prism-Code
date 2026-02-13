@@ -1,301 +1,473 @@
-import { MacroViewData } from '../types/ir';
+import { useCallback, useState } from 'react';
+import ReactFlow, {
+  Node,
+  Edge,
+  Controls,
+  Background,
+  useNodesState,
+  useEdgesState,
+  BackgroundVariant,
+  Panel,
+} from 'reactflow';
+import 'reactflow/dist/style.css';
+
+// VSCode WebView APIの型定義
+declare global {
+  interface Window {
+    acquireVsCodeApi: () => {
+      postMessage: (message: any) => void;
+    };
+  }
+}
+
+const vscode = window.acquireVsCodeApi();
 
 interface MacroViewProps {
-  data: MacroViewData;
+  // 将来的にAIから受け取るデータの型
+  data?: any;
 }
+
+// 仮データ: 機能単位でグループ化されたフローチャート
+const MOCK_NODES: Node[] = [
+  // 機能1: ユーザー認証
+  {
+    id: 'func-auth',
+    type: 'group',
+    position: { x: 50, y: 50 },
+    data: { label: '機能: ユーザー認証' },
+    style: {
+      width: 350,
+      height: 400,
+      background: 'rgba(102, 126, 234, 0.1)',
+      border: '2px solid #667eea',
+      borderRadius: '12px',
+      padding: '20px',
+    },
+  },
+  {
+    id: 'auth-1',
+    type: 'default',
+    position: { x: 25, y: 80 },
+    data: { label: 'ログイン画面表示' },
+    parentNode: 'func-auth',
+    style: {
+      background: '#667eea',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'auth-2',
+    type: 'default',
+    position: { x: 25, y: 160 },
+    data: { label: '認証情報検証' },
+    parentNode: 'func-auth',
+    style: {
+      background: '#667eea',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'auth-3',
+    type: 'default',
+    position: { x: 25, y: 240 },
+    data: { label: 'トークン生成' },
+    parentNode: 'func-auth',
+    style: {
+      background: '#667eea',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'auth-4',
+    type: 'default',
+    position: { x: 25, y: 320 },
+    data: { label: 'セッション確立' },
+    parentNode: 'func-auth',
+    style: {
+      background: '#667eea',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+
+  // 機能2: データ処理
+  {
+    id: 'func-data',
+    type: 'group',
+    position: { x: 500, y: 50 },
+    data: { label: '機能: データ処理' },
+    style: {
+      width: 350,
+      height: 400,
+      background: 'rgba(118, 75, 162, 0.1)',
+      border: '2px solid #764ba2',
+      borderRadius: '12px',
+      padding: '20px',
+    },
+  },
+  {
+    id: 'data-1',
+    type: 'default',
+    position: { x: 25, y: 80 },
+    data: { label: 'データ取得' },
+    parentNode: 'func-data',
+    style: {
+      background: '#764ba2',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'data-2',
+    type: 'default',
+    position: { x: 25, y: 160 },
+    data: { label: 'データ変換' },
+    parentNode: 'func-data',
+    style: {
+      background: '#764ba2',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'data-3',
+    type: 'default',
+    position: { x: 25, y: 240 },
+    data: { label: 'データ保存' },
+    parentNode: 'func-data',
+    style: {
+      background: '#764ba2',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+
+  // 機能3: エラーハンドリング
+  {
+    id: 'func-error',
+    type: 'group',
+    position: { x: 950, y: 50 },
+    data: { label: '機能: エラーハンドリング' },
+    style: {
+      width: 350,
+      height: 300,
+      background: 'rgba(239, 68, 68, 0.1)',
+      border: '2px solid #ef4444',
+      borderRadius: '12px',
+      padding: '20px',
+    },
+  },
+  {
+    id: 'error-1',
+    type: 'default',
+    position: { x: 25, y: 80 },
+    data: { label: 'エラー検知' },
+    parentNode: 'func-error',
+    style: {
+      background: '#ef4444',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+  {
+    id: 'error-2',
+    type: 'default',
+    position: { x: 25, y: 160 },
+    data: { label: 'ログ出力' },
+    parentNode: 'func-error',
+    style: {
+      background: '#ef4444',
+      color: '#fff',
+      border: 'none',
+      borderRadius: '8px',
+      fontSize: '12px',
+      padding: '10px',
+    },
+  },
+];
+
+const MOCK_EDGES: Edge[] = [
+  // 認証機能内のフロー
+  { id: 'e-auth-1-2', source: 'auth-1', target: 'auth-2', animated: true },
+  { id: 'e-auth-2-3', source: 'auth-2', target: 'auth-3', animated: true },
+  { id: 'e-auth-3-4', source: 'auth-3', target: 'auth-4', animated: true },
+
+  // データ処理機能内のフロー
+  { id: 'e-data-1-2', source: 'data-1', target: 'data-2', animated: true },
+  { id: 'e-data-2-3', source: 'data-2', target: 'data-3', animated: true },
+
+  // エラーハンドリング機能内のフロー
+  { id: 'e-error-1-2', source: 'error-1', target: 'error-2', animated: true },
+
+  // 機能間の連携
+  {
+    id: 'e-auth-data',
+    source: 'auth-4',
+    target: 'data-1',
+    label: '認証成功後',
+    style: { stroke: '#10b981', strokeWidth: 3 },
+    animated: true,
+  },
+  {
+    id: 'e-auth-error',
+    source: 'auth-2',
+    target: 'error-1',
+    label: '認証失敗',
+    style: { stroke: '#ef4444', strokeWidth: 3 },
+    animated: true,
+  },
+  {
+    id: 'e-data-error',
+    source: 'data-3',
+    target: 'error-1',
+    label: 'データエラー',
+    style: { stroke: '#ef4444', strokeWidth: 3 },
+    animated: true,
+  },
+];
 
 export function MacroView({ data }: MacroViewProps) {
+  const [nodes, setNodes, onNodesChange] = useNodesState(MOCK_NODES);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(MOCK_EDGES);
+  const [selectedFeature, setSelectedFeature] = useState<string | null>(null);
+
+  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    if (node.type === 'group') {
+      setSelectedFeature(node.id);
+    }
+  }, []);
+
+  const switchToMicroView = useCallback(() => {
+    vscode.postMessage({ type: 'switchViewMode', viewMode: 'micro' });
+  }, []);
+
+  const switchToOverviewView = useCallback(() => {
+    vscode.postMessage({ type: 'switchViewMode', viewMode: 'overview' });
+  }, []);
+
   return (
-    <div
-      style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#1e1e1e',
-        color: '#e0e0e0',
-        padding: '20px',
-        overflow: 'auto',
-      }}
-    >
-      {/* ヘッダー */}
-      <div
-        style={{
-          marginBottom: '30px',
-          borderBottom: '2px solid #667eea',
-          paddingBottom: '15px',
-        }}
+    <div style={{ width: '100vw', height: '100vh', background: '#1e1e1e' }}>
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        onNodesChange={onNodesChange}
+        onEdgesChange={onEdgesChange}
+        onNodeClick={onNodeClick}
+        fitView
+        style={{ background: '#1e1e1e' }}
       >
-        <h1
-          style={{
-            margin: 0,
-            fontSize: '28px',
-            fontWeight: 'bold',
-            color: '#667eea',
-          }}
-        >
-          🔭 マクロビュー（俯瞰）
-        </h1>
-        <p
-          style={{
-            margin: '5px 0 0 0',
-            fontSize: '14px',
-            color: '#9ca3af',
-          }}
-        >
-          {data.metadata.sourceFile.split('/').pop()} - システム全体の構造を表示
-        </p>
-      </div>
+        <Background variant={BackgroundVariant.Dots} gap={16} size={1} color="#404040" />
+        <Controls />
 
-      {/* 統計情報 */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '15px',
-          marginBottom: '30px',
-        }}
-      >
-        <StatCard
-          title="関数数"
-          value={data.functions.length}
-          icon="📊"
-          color="#667eea"
-        />
-        <StatCard
-          title="関数呼び出し"
-          value={data.callGraph.length}
-          icon="🔗"
-          color="#764ba2"
-        />
-        <StatCard
-          title="平均行数"
-          value={Math.round(
-            data.functions.reduce((sum, f) => sum + f.lineCount, 0) /
-              data.functions.length || 0
-          )}
-          icon="📝"
-          color="#f59e0b"
-        />
-        <StatCard
-          title="平均複雑度"
-          value={Math.round(
-            data.functions.reduce((sum, f) => sum + f.complexity, 0) /
-              data.functions.length || 0
-          )}
-          icon="⚙️"
-          color="#ef4444"
-        />
-      </div>
-
-      {/* 関数一覧 */}
-      <div style={{ marginBottom: '30px' }}>
-        <h2
-          style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
-            marginBottom: '15px',
-            color: '#60a5fa',
-          }}
-        >
-          関数一覧
-        </h2>
-        <div
-          style={{
-            display: 'grid',
-            gap: '15px',
-          }}
-        >
-          {data.functions.map((func) => (
-            <FunctionCard key={func.id} func={func} />
-          ))}
-        </div>
-      </div>
-
-      {/* 関数呼び出しグラフ */}
-      {data.callGraph.length > 0 && (
-        <div>
-          <h2
-            style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              marginBottom: '15px',
-              color: '#60a5fa',
-            }}
-          >
-            関数呼び出し関係
-          </h2>
+        {/* パネル: 説明 */}
+        <Panel position="top-left">
           <div
             style={{
-              background: '#2d2d2d',
+              background: 'rgba(30, 30, 30, 0.95)',
+              padding: '15px 20px',
               borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #404040',
+              border: '1px solid #667eea',
+              color: '#e0e0e0',
+              maxWidth: '400px',
             }}
           >
-            {data.callGraph.map((call) => (
-              <div
-                key={call.id}
+            <h2
+              style={{
+                margin: '0 0 10px 0',
+                fontSize: '18px',
+                fontWeight: 'bold',
+                color: '#667eea',
+              }}
+            >
+              🔭 マクロビュー（機能単位）
+            </h2>
+            <p style={{ margin: 0, fontSize: '13px', color: '#9ca3af' }}>
+              機能単位でグループ化されたフローチャートを表示しています。
+              <br />
+              将来的にAIが自動的に機能を分類・可視化します。
+            </p>
+          </div>
+        </Panel>
+
+        {/* パネル: ビュー切替 */}
+        <Panel position="bottom-left">
+          <div
+            style={{
+              background: 'rgba(30, 30, 30, 0.95)',
+              padding: '12px',
+              borderRadius: '8px',
+              border: '1px solid #404040',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div
+              style={{
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#9ca3af',
+                marginBottom: '4px',
+              }}
+            >
+              ビュー切替
+            </div>
+            <button
+              onClick={switchToMicroView}
+              style={{
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#fff',
+                background: '#60a5fa',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              🔬 ミクロビュー
+            </button>
+            <button
+              onClick={switchToOverviewView}
+              style={{
+                padding: '8px 16px',
+                fontSize: '12px',
+                fontWeight: 'bold',
+                color: '#fff',
+                background: '#764ba2',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              📊 概要ビュー
+            </button>
+          </div>
+        </Panel>
+
+        {/* パネル: 選択中の機能 */}
+        {selectedFeature && (
+          <Panel position="top-right">
+            <div
+              style={{
+                background: 'rgba(30, 30, 30, 0.95)',
+                padding: '15px 20px',
+                borderRadius: '8px',
+                border: '1px solid #10b981',
+                color: '#e0e0e0',
+                minWidth: '250px',
+              }}
+            >
+              <h3
                 style={{
-                  padding: '10px',
-                  marginBottom: '10px',
-                  background: '#1e1e1e',
-                  borderRadius: '6px',
-                  borderLeft: '3px solid #667eea',
-                  fontSize: '14px',
+                  margin: '0 0 10px 0',
+                  fontSize: '16px',
+                  fontWeight: 'bold',
+                  color: '#10b981',
                 }}
               >
-                <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
-                  {call.caller}
-                </span>
-                <span style={{ color: '#9ca3af', margin: '0 10px' }}>→</span>
-                <span style={{ color: '#a78bfa' }}>{call.callee}()</span>
-                <span
-                  style={{
-                    color: '#6b7280',
-                    fontSize: '12px',
-                    marginLeft: '10px',
-                  }}
-                >
-                  (line {call.location.start.line})
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+                選択中: {selectedFeature}
+              </h3>
+              <button
+                onClick={() => setSelectedFeature(null)}
+                style={{
+                  padding: '8px 16px',
+                  fontSize: '12px',
+                  fontWeight: 'bold',
+                  color: '#fff',
+                  background: '#667eea',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                }}
+              >
+                選択解除
+              </button>
+            </div>
+          </Panel>
+        )}
 
-      {/* フッター */}
-      <div
-        style={{
-          marginTop: '40px',
-          padding: '20px',
-          textAlign: 'center',
-          color: '#6b7280',
-          fontSize: '12px',
-          borderTop: '1px solid #404040',
-        }}
-      >
-        💡 ヒント: コマンドパレットから「ミクロビュー(詳細)」に切り替えて、各関数の詳細なフローチャートを表示できます
-      </div>
-    </div>
-  );
-}
-
-// 統計カードコンポーネント
-function StatCard({
-  title,
-  value,
-  icon,
-  color,
-}: {
-  title: string;
-  value: number;
-  icon: string;
-  color: string;
-}) {
-  return (
-    <div
-      style={{
-        background: '#2d2d2d',
-        padding: '20px',
-        borderRadius: '8px',
-        border: '1px solid #404040',
-        textAlign: 'center',
-      }}
-    >
-      <div style={{ fontSize: '32px', marginBottom: '10px' }}>{icon}</div>
-      <div
-        style={{
-          fontSize: '28px',
-          fontWeight: 'bold',
-          color,
-          marginBottom: '5px',
-        }}
-      >
-        {value}
-      </div>
-      <div style={{ fontSize: '14px', color: '#9ca3af' }}>{title}</div>
-    </div>
-  );
-}
-
-// 関数カードコンポーネント
-function FunctionCard({ func }: { func: any }) {
-  return (
-    <div
-      style={{
-        background: '#2d2d2d',
-        padding: '20px',
-        borderRadius: '8px',
-        border: '1px solid #404040',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-        <div>
-          <h3
-            style={{
-              margin: 0,
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#60a5fa',
-            }}
-          >
-            {func.name}
-          </h3>
+        {/* パネル: 凡例 */}
+        <Panel position="bottom-right">
           <div
             style={{
-              fontSize: '13px',
-              color: '#9ca3af',
-              marginTop: '5px',
+              background: 'rgba(30, 30, 30, 0.95)',
+              padding: '15px',
+              borderRadius: '8px',
+              border: '1px solid #404040',
+              color: '#e0e0e0',
             }}
           >
-            ({func.parameters.join(', ')})
-            {func.returnType && (
-              <span style={{ color: '#a78bfa' }}> → {func.returnType}</span>
-            )}
+            <div style={{ fontSize: '12px', fontWeight: 'bold', marginBottom: '8px' }}>
+              凡例
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    background: '#667eea',
+                    borderRadius: '4px',
+                  }}
+                />
+                <span>認証機能</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    background: '#764ba2',
+                    borderRadius: '4px',
+                  }}
+                />
+                <span>データ処理</span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <div
+                  style={{
+                    width: '16px',
+                    height: '16px',
+                    background: '#ef4444',
+                    borderRadius: '4px',
+                  }}
+                />
+                <span>エラーハンドリング</span>
+              </div>
+            </div>
           </div>
-        </div>
-        <div
-          style={{
-            fontSize: '12px',
-            color: '#6b7280',
-          }}
-        >
-          行 {func.location.start.line}-{func.location.end.line}
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-        <Badge
-          label={`${func.lineCount}行`}
-          color="#f59e0b"
-        />
-        <Badge
-          label={`複雑度: ${func.complexity}`}
-          color={func.complexity > 5 ? '#ef4444' : '#10b981'}
-        />
-        {func.hasLoops && <Badge label="ループあり" color="#667eea" />}
-        {func.hasConditionals && <Badge label="条件分岐あり" color="#764ba2" />}
-      </div>
+        </Panel>
+      </ReactFlow>
     </div>
-  );
-}
-
-// バッジコンポーネント
-function Badge({ label, color }: { label: string; color: string }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        padding: '4px 10px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 'bold',
-        background: `${color}20`,
-        color,
-        border: `1px solid ${color}40`,
-      }}
-    >
-      {label}
-    </span>
   );
 }
