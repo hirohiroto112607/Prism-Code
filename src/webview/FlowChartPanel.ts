@@ -71,24 +71,31 @@ export class FlowChartPanel {
    * IRデータをWebViewに送信してフローチャートを更新（ミクロビュー）
    */
   public updateFlowChart(ir: IR): void {
+    console.log('FlowChartPanel.updateFlowChart called with IR:', {
+      nodes: ir.nodes.length,
+      edges: ir.edges.length
+    });
     this._currentViewMode = 'micro';
     this._panel.webview.postMessage({
       type: 'updateFlow',
       data: ir,
       viewMode: 'micro',
     });
+    console.log('Message sent to webview');
   }
 
   /**
    * マクロビューデータをWebViewに送信
    */
   public updateMacroView(macroData: MacroViewData): void {
+    console.log('FlowChartPanel.updateMacroView called with data:', macroData);
     this._currentViewMode = 'macro';
     this._panel.webview.postMessage({
       type: 'updateMacroView',
       data: macroData,
       viewMode: 'macro',
     });
+    console.log('Macro view message sent to webview');
   }
 
   /**

@@ -36,7 +36,9 @@ function App() {
         case 'updateFlow': {
           try {
             const ir: IR = message.data;
+            console.log('updateFlow received:', ir);
             const { nodes: flowNodes, edges: flowEdges } = convertIRToReactFlow(ir);
+            console.log('Converted nodes:', flowNodes.length, 'edges:', flowEdges.length);
             setNodes(flowNodes);
             setEdges(flowEdges);
             setViewMode('micro');
@@ -50,6 +52,7 @@ function App() {
         case 'updateMacroView': {
           try {
             const data: MacroViewData = message.data;
+            console.log('updateMacroView received:', data);
             setMacroData(data);
             setViewMode('macro');
             setError(null);
@@ -62,6 +65,7 @@ function App() {
         case 'updateOverviewView': {
           try {
             const data: MacroViewData = message.data;
+            console.log('updateOverviewView received:', data);
             setOverviewData(data);
             setViewMode('overview');
             setError(null);
@@ -120,8 +124,12 @@ function App() {
 
   // ミクロビューの表示
   if (viewMode === 'micro' && nodes.length > 0) {
+    console.log('Rendering FlowChart with nodes:', nodes.length, 'edges:', edges.length);
     return <FlowChart nodes={nodes} edges={edges} />;
   }
+
+  // デバッグ: viewModeとnodesの状態を確認
+  console.log('Current viewMode:', viewMode, 'nodes.length:', nodes.length);
 
   // 初期状態（データなし）
   return (

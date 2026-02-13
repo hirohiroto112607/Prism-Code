@@ -35,6 +35,12 @@ interface FlowChartProps {
 }
 
 export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChartProps) {
+  console.log('FlowChart component rendered with:', {
+    nodes: initialNodes.length,
+    edges: initialEdges.length,
+    firstNode: initialNodes[0]
+  });
+
   const nodeTypes = useMemo(
     () => ({
       start: StartNode,
@@ -49,6 +55,11 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
   const [nodes, , onNodesChange] = useNodesState(initialNodes);
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
 
+  console.log('FlowChart state:', {
+    nodes: nodes.length,
+    edges: edges.length
+  });
+
   const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     console.log('Node clicked:', node);
     // 将来的には、ノードクリックでソースコードへジャンプ
@@ -62,6 +73,8 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
     vscode.postMessage({ type: 'switchViewMode', viewMode: 'overview' });
   }, []);
 
+  console.log('Rendering ReactFlow component...');
+
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#1e1e1e' }}>
       <ReactFlow
@@ -73,6 +86,7 @@ export function FlowChart({ nodes: initialNodes, edges: initialEdges }: FlowChar
         nodeTypes={nodeTypes}
         fitView
         attributionPosition="bottom-left"
+        onInit={() => console.log('ReactFlow initialized')}
       >
         <Controls />
         <MiniMap

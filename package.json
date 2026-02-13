@@ -11,7 +11,7 @@
     "Programming Languages"
   ],
   "activationEvents": [
-    "onView:prismcode.aiChat",
+    "prismcode.aiChat",
     "onLanguage:typescript",
     "onLanguage:typescriptreact"
   ],

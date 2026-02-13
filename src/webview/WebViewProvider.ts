@@ -48,12 +48,17 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendFlowData(ir: IR): void {
     if (this._view) {
+      console.log('Sending flow data to WebView:', {
+        nodes: ir.nodes.length,
+        edges: ir.edges.length
+      });
       this._view.show?.(true);
       this._view.webview.postMessage({
         type: 'updateFlow',
         data: ir,
       });
     } else {
+      console.error('WebView is not available');
       vscode.window.showErrorMessage(
         'フロービューが開かれていません。サイドバーの「Prism Code」を開いてください。'
       );
@@ -65,6 +70,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendMacroViewData(data: any): void {
     if (this._view) {
+      console.log('Sending macro view data to WebView:', data);
       this._view.show?.(true);
       this._view.webview.postMessage({
         type: 'updateMacroView',
@@ -78,6 +84,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendOverviewData(data: any): void {
     if (this._view) {
+      console.log('Sending overview data to WebView:', data);
       this._view.show?.(true);
       this._view.webview.postMessage({
         type: 'updateOverviewView',
