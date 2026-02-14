@@ -20,11 +20,15 @@
       },
       {
         "command": "prismcode.switchToMacro",
-        "title": "Prism Code: マクロビュー(俯瞰)"
+        "title": "Prism Code: マクロビュー(現在のファイル)"
       },
       {
         "command": "prismcode.switchToMicro",
         "title": "Prism Code: ミクロビュー(詳細)"
+      },
+      {
+        "command": "prismcode.showWorkspaceMacroView",
+        "title": "Prism Code: ワークスペース全体のマクロビュー"
       }
     ],
     "viewsContainers": {

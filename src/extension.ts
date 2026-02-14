@@ -4,6 +4,7 @@ import { IRTransformer } from './core/transformer/IRTransformer';
 import { MacroViewTransformer } from './core/transformer/MacroViewTransformer';
 import { FlowChartPanel } from './webview/FlowChartPanel';
 import { AIChatViewProvider } from './webview/AIChatViewProvider';
+import { ParserFactory } from './parsers/ParserFactory';
 
 /**
  * 拡張機能のアクティベーション
@@ -212,6 +213,128 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(switchToMacroCommand, switchToMicroCommand);
+
+  // ワークスペース全体のマクロビューを表示するコマンド
+  const showWorkspaceMacroCommand = vscode.commands.registerCommand(
+    'prismcode.showWorkspaceMacroView',
+    async () => {
+      try {
+        // ワークスペースフォルダが開かれているか確認
+        if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+          vscode.window.showErrorMessage('ワークスペースが開かれていません');
+          return;
+        }
+
+        vscode.window.showInformationMessage('ワークスペース全体をスキャン中...');
+
+        // サポートされているすべての拡張子のファイルを検索
+        const globPattern = ParserFactory.getGlobPattern();
+        console.log('Searching files with pattern:', globPattern);
+
+        const files = await vscode.workspace.findFiles(
+          globPattern,
+          '**/node_modules/**'
+        );
+
+        console.log(`Found ${files.length} files`);
+
+        if (files.length === 0) {
+          const supportedLanguages = ParserFactory.getSupportedLanguages().join(', ');
+          vscode.window.showWarningMessage(
+            `サポートされている言語のファイルが見つかりませんでした (${supportedLanguages})`
+          );
+          return;
+        }
+
+        const macroTransformer = new MacroViewTransformer();
+
+        // 全ファイルの関数情報を収集
+        const allFunctions: any[] = [];
+        const allCallGraph: any[] = [];
+        const processedLanguages = new Set<string>();
+
+        let processedFiles = 0;
+        const maxFiles = Math.min(files.length, 100); // 最大100ファイルまで処理
+
+        for (const file of files.slice(0, maxFiles)) {
+          try {
+            // ファイルパスから適切なパーサーを取得
+            const parser = ParserFactory.getParser(file.fsPath);
+            if (!parser) {
+              console.warn(`No parser found for file: ${file.fsPath}`);
+              continue;
+            }
+
+            const document = await vscode.workspace.openTextDocument(file);
+            const code = document.getText();
+            const filePath = file.fsPath;
+
+            // ファイルをパース
+            const ast = parser.parse(code, filePath);
+
+            // マクロビューデータを生成
+            const macroData = macroTransformer.transform(ast, {
+              language: parser.getSupportedLanguage(),
+              file: filePath,
+            });
+
+            // 関数情報を追加（ファイル名と言語も含める）
+            for (const func of macroData.functions) {
+              allFunctions.push({
+                ...func,
+                sourceFile: vscode.workspace.asRelativePath(filePath),
+                language: parser.getSupportedLanguage(),
+              });
+            }
+
+            // コールグラフを追加
+            allCallGraph.push(...macroData.callGraph);
+
+            processedLanguages.add(parser.getSupportedLanguage());
+            processedFiles++;
+          } catch (error) {
+            console.error(`Failed to parse file ${file.fsPath}:`, error);
+          }
+        }
+
+        console.log(`Processed ${processedFiles} files, found ${allFunctions.length} functions`);
+
+        if (allFunctions.length === 0) {
+          vscode.window.showWarningMessage('関数が見つかりませんでした');
+          return;
+        }
+
+        // 統合されたマクロビューデータを作成
+        const languageList = Array.from(processedLanguages).join(', ');
+        const workspaceMacroData = {
+          metadata: {
+            sourceLanguage: languageList,
+            sourceFile: 'Workspace',
+            timestamp: Date.now(),
+            fileCount: processedFiles,
+            totalFiles: files.length,
+          },
+          functions: allFunctions,
+          callGraph: allCallGraph,
+        };
+
+        // パネルを開いてマクロビューを表示
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateMacroView(workspaceMacroData);
+
+        vscode.window.showInformationMessage(
+          `ワークスペースマクロビューを生成しました（${processedFiles}ファイル, ${allFunctions.length}関数）`
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `エラーが発生しました: ${error.message}`
+        );
+        console.error('ワークスペースマクロビュー生成エラー:', error);
+      }
+    }
+  );
+
+  context.subscriptions.push(showWorkspaceMacroCommand);
 }
 
 /**

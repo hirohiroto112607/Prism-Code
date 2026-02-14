@@ -54,3 +54,7 @@ logs/
 # テンポラリファイル
 *.tmp
 .cache/
+
+# デバッグ用サンプルファイル
+sample/
+!sample/sample.ts
