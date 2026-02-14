@@ -88,7 +88,10 @@ export class IRTransformer {
 
       // 前の出口から現在の入口に接続
       for (const exitId of currentExits) {
-        this.addEdge(exitId, entryId);
+        // 前のノードがループノードの場合、「ループ終了」ラベルを付ける
+        const exitNode = this.nodes.find(n => n.id === exitId);
+        const label = (exitNode?.type === 'for' || exitNode?.type === 'while') ? 'ループ終了' : undefined;
+        this.addEdge(exitId, entryId, label);
       }
 
       // 現在の出口を更新
@@ -104,7 +107,10 @@ export class IRTransformer {
 
     // 最後の出口から終了ノードへ接続
     for (const exitId of currentExits) {
-      this.addEdge(exitId, endId);
+      // 最後のノードがループノードの場合、「ループ終了」ラベルを付ける
+      const exitNode = this.nodes.find(n => n.id === exitId);
+      const label = (exitNode?.type === 'for' || exitNode?.type === 'while') ? 'ループ終了' : undefined;
+      this.addEdge(exitId, endId, label);
     }
 
     return startId;
@@ -152,7 +158,7 @@ export class IRTransformer {
     }
 
     // Else分岐のノードを変換
-    let elseExits: string[] = [nodeId]; // else分岐の出口（デフォルトはifノード自体）
+    let elseExits: string[] = [];
     if (ifNode.elseBranch && ifNode.elseBranch.length > 0) {
       let currentExits = [nodeId];
       let isFirst = true;
@@ -171,10 +177,12 @@ export class IRTransformer {
         isFirst = false;
       }
       elseExits = currentExits;
+    } else {
+      // else分岐が空の場合、ifノード自体を出口とする
+      elseExits = [nodeId];
     }
 
     // 入口ID + 両方の分岐の出口IDを返す
-    // 出口がifノード自体の場合は除外（空の分岐を除く）
     const allExits = [...thenExits, ...elseExits];
     const uniqueExits = Array.from(new Set(allExits)); // 重複を除去
 
@@ -251,7 +259,7 @@ export class IRTransformer {
 
         // 前の出口から現在の入口に接続
         for (const exitId of currentExits) {
-          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'true' : undefined);
+          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'ループ継続' : undefined);
         }
 
         currentExits = stmtExits;

@@ -50,20 +50,20 @@ export function IfNode({ data }: { data: IfNodeData }) {
         {data.condition}
       </div>
 
-      {/* True用のハンドル（下部左寄り） */}
+      {/* True用のハンドル（下部左） */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="true"
-        style={{ left: '30%', background: '#10b981' }}
+        style={{ left: '20%', background: '#10b981' }}
       />
 
-      {/* False用のハンドル（下部右寄り） */}
+      {/* False用のハンドル（下部右） */}
       <Handle
         type="source"
         position={Position.Bottom}
         id="false"
-        style={{ left: '70%', background: '#ef4444' }}
+        style={{ left: '80%', background: '#ef4444' }}
       />
     </div>
   );

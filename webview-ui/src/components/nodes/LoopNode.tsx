@@ -18,7 +18,20 @@ export function LoopNode({ data }: { data: LoopNodeData }) {
         position: 'relative',
       }}
     >
-      <Handle type="target" position={Position.Top} />
+      {/* 初回入力用ハンドル */}
+      <Handle
+        type="target"
+        position={Position.Top}
+        id="entry"
+      />
+
+      {/* バックエッジ用ハンドル（ループ本体から戻る） */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        id="loop"
+        style={{ background: '#14b8a6' }}
+      />
 
       <div style={{ fontWeight: 'bold', marginBottom: '4px' }}>
         {data.loopType === 'for' ? '🔁 For Loop' : '🔁 While Loop'}
@@ -30,10 +43,10 @@ export function LoopNode({ data }: { data: LoopNodeData }) {
         </div>
       )}
 
-      {/* ループ継続 */}
+      {/* ループ継続（ループ本体へ） */}
       <Handle
         type="source"
-        position={Position.Right}
+        position={Position.Bottom}
         id="continue"
         style={{ background: '#10b981' }}
       />
@@ -41,7 +54,7 @@ export function LoopNode({ data }: { data: LoopNodeData }) {
       {/* ループ終了 */}
       <Handle
         type="source"
-        position={Position.Bottom}
+        position={Position.Right}
         id="exit"
         style={{ background: '#ef4444' }}
       />

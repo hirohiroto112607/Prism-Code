@@ -46,7 +46,13 @@ export function convertIRToReactFlow(ir: IR): { nodes: Node[]; edges: Edge[] } {
     if (irEdge.label === 'ループ') {
       edge.animated = true;
       edge.style = { stroke: '#14b8a6', strokeWidth: 2 };
-      edge.targetHandle = undefined; // ループノードのtopハンドル（デフォルト）
+      edge.targetHandle = 'loop'; // バックエッジ専用ハンドル
+    }
+
+    // ループノードへの初回入力エッジの場合
+    const targetNode = ir.nodes.find(n => n.id === irEdge.target);
+    if (targetNode && (targetNode.type === 'for' || targetNode.type === 'while') && irEdge.label !== 'ループ') {
+      edge.targetHandle = 'entry'; // 初回入力用ハンドル
     }
 
     return edge;
