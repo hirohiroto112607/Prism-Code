@@ -29,6 +29,22 @@
       {
         "command": "prismcode.showWorkspaceMacroView",
         "title": "Prism Code: ワークスペース全体のマクロビュー"
+      },
+      {
+        "command": "prismcode.generateIndex",
+        "title": "Prism Code: プロジェクトインデックスを生成"
+      },
+      {
+        "command": "prismcode.generateMacroViewData",
+        "title": "Prism Code: マクロビューデータを生成（キャッシュ）"
+      },
+      {
+        "command": "prismcode.exportForAITools",
+        "title": "Prism Code: AIツール向けコンテキストをエクスポート"
+      },
+      {
+        "command": "prismcode.loadCachedMacroView",
+        "title": "Prism Code: キャッシュからマクロビューを読み込み"
       }
     ],
     "viewsContainers": {
@@ -78,7 +94,7 @@
     "vscode:prepublish": "pnpm run compile && pnpm run compile:webview",
     "compile": "tsc -p ./",
     "compile:webview": "pnpm --dir webview-ui run build",
-    "watch": "tsc -watch -p ./",
+    "watch": "pnpm run compile:webview && tsc -watch -p ./",
     "pretest": "pnpm run compile",
     "lint": "eslint src --ext ts"
   },

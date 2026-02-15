@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { IR, MacroViewData } from '../core/ir/IR';
+import { ProjectMacroViewData } from '../core/index/types';
 
 /**
  * エディタエリアにフローチャートを表示するWebviewPanel
@@ -96,6 +97,20 @@ export class FlowChartPanel {
       viewMode: 'macro',
     });
     console.log('Macro view message sent to webview');
+  }
+
+  /**
+   * プロジェクト全体のマクロビューデータをWebViewに送信
+   */
+  public updateProjectMacroView(projectMacroData: ProjectMacroViewData): void {
+    console.log('FlowChartPanel.updateProjectMacroView called with data:', projectMacroData);
+    this._currentViewMode = 'macro';
+    this._panel.webview.postMessage({
+      type: 'updateMacroView',
+      data: projectMacroData,
+      viewMode: 'macro',
+    });
+    console.log('Project macro view message sent to webview');
   }
 
   /**

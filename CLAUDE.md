@@ -542,6 +542,8 @@ cd webview-ui && pnpm run dev
 4. TypeScriptファイルを開く（`sample/sample.ts`）
 5. サイドバーの「🔍 現在のファイルを可視化」ボタンをクリック
 
+デバッグ用のVSCodeウィンドウは、sampleディレクトリを開いています。ここにテスト用のTypeScriptコードを配置して、可視化機能を試すことができます。
+
 ### 7.4 ビルド（本番用）
 
 ```bash

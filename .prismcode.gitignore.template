@@ -1,0 +1,13 @@
+# Prism Code - 部分的なGit管理用の.gitignore
+# このファイルを .prismcode/.gitignore にコピーして使用してください
+
+# キャッシュは除外（ローカル環境依存）
+cache/
+
+# index.jsonは除外（ファイルハッシュを含むため）
+index.json
+
+# 以下はGit管理する
+# - config.json（チーム設定）
+# - analysis/（プロジェクト構造）
+# - exports/（AIツール向けコンテキスト）

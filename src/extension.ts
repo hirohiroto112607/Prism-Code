@@ -5,12 +5,27 @@ import { MacroViewTransformer } from './core/transformer/MacroViewTransformer';
 import { FlowChartPanel } from './webview/FlowChartPanel';
 import { AIChatViewProvider } from './webview/AIChatViewProvider';
 import { ParserFactory } from './parsers/ParserFactory';
+import { IndexManager } from './core/index/IndexManager';
+import { ProjectScanner } from './core/index/ProjectScanner';
+import { Exporter } from './core/index/Exporter';
 
 /**
  * 拡張機能のアクティベーション
  */
 export function activate(context: vscode.ExtensionContext) {
   console.log('Prism Code が起動しました！');
+
+  // IndexManagerの初期化
+  let indexManager: IndexManager | undefined;
+  const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+
+  if (workspaceFolder) {
+    indexManager = new IndexManager(workspaceFolder.uri.fsPath);
+    // .prismcodeフォルダーを初期化
+    indexManager.initialize().catch((error) => {
+      console.error('.prismcode初期化エラー:', error);
+    });
+  }
 
   // サイドバーにAIチャットビューを登録
   const aiChatProvider = new AIChatViewProvider(context.extensionUri);
@@ -335,6 +350,160 @@ export function activate(context: vscode.ExtensionContext) {
   );
 
   context.subscriptions.push(showWorkspaceMacroCommand);
+
+  // プロジェクトインデックス生成コマンド
+  const generateIndexCommand = vscode.commands.registerCommand(
+    'prismcode.generateIndex',
+    async () => {
+      try {
+        if (!indexManager) {
+          vscode.window.showErrorMessage('ワークスペースが開かれていません');
+          return;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        if (!workspaceRoot) {
+          return;
+        }
+
+        console.log('=== インデックス生成開始 ===');
+        console.log('ワークスペースルート:', workspaceRoot);
+        console.log('ワークスペースフォルダー数:', vscode.workspace.workspaceFolders?.length);
+
+        vscode.window.showInformationMessage('プロジェクトをスキャン中...');
+
+        const scanner = new ProjectScanner(indexManager);
+        const projectIndex = await scanner.scanProject(workspaceRoot);
+
+        console.log('=== インデックス生成完了 ===');
+        console.log('総ファイル数:', projectIndex.metadata.totalFiles);
+        console.log('総関数数:', projectIndex.metadata.totalFunctions);
+
+        vscode.window.showInformationMessage(
+          `インデックス生成完了！（${projectIndex.metadata.totalFiles}ファイル, ${projectIndex.metadata.totalFunctions}関数）`
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `インデックス生成エラー: ${error.message}`
+        );
+        console.error('インデックス生成エラー:', error);
+      }
+    }
+  );
+
+  // マクロビューデータ生成コマンド
+  const generateMacroViewDataCommand = vscode.commands.registerCommand(
+    'prismcode.generateMacroViewData',
+    async () => {
+      try {
+        if (!indexManager) {
+          vscode.window.showErrorMessage('ワークスペースが開かれていません');
+          return;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        if (!workspaceRoot) {
+          return;
+        }
+
+        vscode.window.showInformationMessage('マクロビューデータを生成中...');
+
+        const scanner = new ProjectScanner(indexManager);
+
+        // まずインデックスを生成
+        await scanner.scanProject(workspaceRoot);
+
+        // マクロビューデータを生成
+        const macroViewData = await scanner.generateMacroViewData(workspaceRoot);
+
+        // パネルを開いてマクロビューを表示
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateProjectMacroView(macroViewData);
+
+        vscode.window.showInformationMessage(
+          `マクロビュー生成完了！（${macroViewData.metadata.moduleCount}モジュール, ${macroViewData.metadata.functionCount}関数）`
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `マクロビュー生成エラー: ${error.message}`
+        );
+        console.error('マクロビュー生成エラー:', error);
+      }
+    }
+  );
+
+  // AIツール向けエクスポートコマンド
+  const exportForAIToolsCommand = vscode.commands.registerCommand(
+    'prismcode.exportForAITools',
+    async () => {
+      try {
+        if (!indexManager) {
+          vscode.window.showErrorMessage('ワークスペースが開かれていません');
+          return;
+        }
+
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0].uri.fsPath;
+        if (!workspaceRoot) {
+          return;
+        }
+
+        vscode.window.showInformationMessage('AIツール向けコンテキストをエクスポート中...');
+
+        const exporter = new Exporter(indexManager, workspaceRoot);
+        await exporter.exportAll();
+
+        vscode.window.showInformationMessage(
+          'エクスポート完了！.prismcode/exports/ フォルダーを確認してください'
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `エクスポートエラー: ${error.message}`
+        );
+        console.error('エクスポートエラー:', error);
+      }
+    }
+  );
+
+  // キャッシュからマクロビューを読み込むコマンド
+  const loadCachedMacroViewCommand = vscode.commands.registerCommand(
+    'prismcode.loadCachedMacroView',
+    async () => {
+      try {
+        if (!indexManager) {
+          vscode.window.showErrorMessage('ワークスペースが開かれていません');
+          return;
+        }
+
+        const macroViewData = await indexManager.loadMacroViewData();
+        if (!macroViewData) {
+          vscode.window.showWarningMessage(
+            'キャッシュされたマクロビューデータがありません。先に「マクロビューデータを生成」を実行してください。'
+          );
+          return;
+        }
+
+        // パネルを開いてマクロビューを表示
+        const panel = FlowChartPanel.createOrShow(context.extensionUri);
+        panel.updateProjectMacroView(macroViewData);
+
+        vscode.window.showInformationMessage(
+          'キャッシュからマクロビューを読み込みました'
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `読み込みエラー: ${error.message}`
+        );
+        console.error('読み込みエラー:', error);
+      }
+    }
+  );
+
+  context.subscriptions.push(
+    generateIndexCommand,
+    generateMacroViewDataCommand,
+    exportForAIToolsCommand,
+    loadCachedMacroViewCommand
+  );
 }
 
 /**
