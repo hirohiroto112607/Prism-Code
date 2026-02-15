@@ -1,18 +1,8 @@
-import { MacroViewData } from '../types/ir';
-import { vscode } from '../vscode-api';
-
 interface OverviewViewProps {
-  data: MacroViewData;
+  data: any;
 }
 
 export function OverviewView({ data }: OverviewViewProps) {
-  const switchToMicroView = () => {
-    vscode.postMessage({ type: 'switchViewMode', viewMode: 'micro' });
-  };
-
-  const switchToMacroView = () => {
-    vscode.postMessage({ type: 'switchViewMode', viewMode: 'macro' });
-  };
 
   return (
     <div
@@ -31,66 +21,27 @@ export function OverviewView({ data }: OverviewViewProps) {
           marginBottom: '30px',
           borderBottom: '2px solid #667eea',
           paddingBottom: '15px',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
         }}
       >
-        <div>
-          <h1
-            style={{
-              margin: 0,
-              fontSize: '28px',
-              fontWeight: 'bold',
-              color: '#667eea',
-            }}
-          >
-            📊 概要ビュー
-          </h1>
-          <p
-            style={{
-              margin: '5px 0 0 0',
-              fontSize: '14px',
-              color: '#9ca3af',
-            }}
-          >
-            {data.metadata.sourceFile.split('/').pop()} - システム全体の構造を表示
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button
-            onClick={switchToMicroView}
-            style={{
-              padding: '10px 20px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: '#60a5fa',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🔬 ミクロビュー
-          </button>
-          <button
-            onClick={switchToMacroView}
-            style={{
-              padding: '10px 20px',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              color: '#fff',
-              background: '#667eea',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              whiteSpace: 'nowrap',
-            }}
-          >
-            🔭 マクロビュー
-          </button>
-        </div>
+        <h1
+          style={{
+            margin: 0,
+            fontSize: '28px',
+            fontWeight: 'bold',
+            color: '#667eea',
+          }}
+        >
+          📊 概要ビュー
+        </h1>
+        <p
+          style={{
+            margin: '5px 0 0 0',
+            fontSize: '14px',
+            color: '#9ca3af',
+          }}
+        >
+          {data?.metadata?.sourceFile?.split('/').pop() || 'ワークスペース'} - システム全体の構造を表示
+        </p>
       </div>
 
       {/* 統計情報 */}

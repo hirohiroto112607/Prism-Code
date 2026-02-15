@@ -16,27 +16,15 @@
     "commands": [
       {
         "command": "prismcode.visualize",
-        "title": "Prism Code: コードを可視化"
+        "title": "Prism Code: コードを可視化（ミクロビュー）"
       },
       {
-        "command": "prismcode.switchToMacro",
-        "title": "Prism Code: マクロビュー(現在のファイル)"
-      },
-      {
-        "command": "prismcode.switchToMicro",
-        "title": "Prism Code: ミクロビュー(詳細)"
-      },
-      {
-        "command": "prismcode.showWorkspaceMacroView",
-        "title": "Prism Code: ワークスペース全体のマクロビュー"
+        "command": "prismcode.showMacroView",
+        "title": "Prism Code: マクロビュー（ワークスペース俯瞰）"
       },
       {
         "command": "prismcode.generateIndex",
         "title": "Prism Code: プロジェクトインデックスを生成"
-      },
-      {
-        "command": "prismcode.generateMacroViewData",
-        "title": "Prism Code: マクロビューデータを生成（キャッシュ）"
       },
       {
         "command": "prismcode.exportForAITools",
@@ -69,18 +57,12 @@
     "menus": {
       "editor/context": [
         {
-          "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
+          "when": "resourceLangId == typescript || resourceLangId == typescriptreact || resourceLangId == javascript || resourceLangId == javascriptreact",
           "command": "prismcode.visualize",
-          "group": "navigation"
-        },
-        {
-          "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
-          "command": "prismcode.switchToMacro",
           "group": "prismcode@1"
         },
         {
-          "when": "resourceLangId == typescript || resourceLangId == typescriptreact",
-          "command": "prismcode.switchToMicro",
+          "command": "prismcode.showMacroView",
           "group": "prismcode@2"
         }
       ]

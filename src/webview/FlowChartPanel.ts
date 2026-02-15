@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { IR, MacroViewData } from '../core/ir/IR';
+import { IR } from '../core/ir/IR';
 import { ProjectMacroViewData } from '../core/index/types';
 
 /**
@@ -86,20 +86,6 @@ export class FlowChartPanel {
   }
 
   /**
-   * マクロビューデータをWebViewに送信
-   */
-  public updateMacroView(macroData: MacroViewData): void {
-    console.log('FlowChartPanel.updateMacroView called with data:', macroData);
-    this._currentViewMode = 'macro';
-    this._panel.webview.postMessage({
-      type: 'updateMacroView',
-      data: macroData,
-      viewMode: 'macro',
-    });
-    console.log('Macro view message sent to webview');
-  }
-
-  /**
    * プロジェクト全体のマクロビューデータをWebViewに送信
    */
   public updateProjectMacroView(projectMacroData: ProjectMacroViewData): void {
@@ -111,25 +97,6 @@ export class FlowChartPanel {
       viewMode: 'macro',
     });
     console.log('Project macro view message sent to webview');
-  }
-
-  /**
-   * ビューモードを切り替え
-   */
-  public switchToMacro(): void {
-    this._currentViewMode = 'macro';
-    this._panel.webview.postMessage({
-      type: 'switchViewMode',
-      viewMode: 'macro',
-    });
-  }
-
-  public switchToMicro(): void {
-    this._currentViewMode = 'micro';
-    this._panel.webview.postMessage({
-      type: 'switchViewMode',
-      viewMode: 'micro',
-    });
   }
 
   /**

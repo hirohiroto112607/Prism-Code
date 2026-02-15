@@ -1,20 +1,18 @@
 import { useEffect, useState } from 'react';
 import { FlowChart } from './components/FlowChart';
 import { MacroView } from './components/MacroView';
-import { OverviewView } from './components/OverviewView';
-import { IR, MacroViewData } from './types/ir';
+import { IR } from './types/ir';
 import { convertIRToReactFlow } from './utils/flowConverter';
 import { Node, Edge } from 'reactflow';
 import { vscode } from './vscode-api';
 
-type ViewMode = 'micro' | 'macro' | 'overview';
+type ViewMode = 'micro' | 'macro';
 
 function App() {
   const [viewMode, setViewMode] = useState<ViewMode>('micro');
   const [nodes, setNodes] = useState<Node[]>([]);
   const [edges, setEdges] = useState<Edge[]>([]);
-  const [macroData, setMacroData] = useState<MacroViewData | null>(null);
-  const [overviewData, setOverviewData] = useState<MacroViewData | null>(null);
+  const [macroData, setMacroData] = useState<any | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // 可視化ボタンのクリックハンドラ
@@ -56,7 +54,7 @@ function App() {
         }
         case 'updateMacroView': {
           try {
-            const data: MacroViewData = message.data;
+            const data = message.data;
             console.log('✅ updateMacroView received:', data);
             setMacroData(data);
             setViewMode('macro');
@@ -65,24 +63,6 @@ function App() {
             setError(err.message);
             console.error('❌ マクロビュー変換エラー:', err);
           }
-          break;
-        }
-        case 'updateOverviewView': {
-          try {
-            const data: MacroViewData = message.data;
-            console.log('✅ updateOverviewView received:', data);
-            setOverviewData(data);
-            setViewMode('overview');
-            setError(null);
-          } catch (err: any) {
-            setError(err.message);
-            console.error('❌ 概要ビュー変換エラー:', err);
-          }
-          break;
-        }
-        case 'switchViewMode': {
-          console.log('✅ switchViewMode to:', message.viewMode);
-          setViewMode(message.viewMode);
           break;
         }
         default:
@@ -122,14 +102,9 @@ function App() {
     );
   }
 
-  // マクロビューの表示（機能単位）
-  if (viewMode === 'macro') {
+  // マクロビューの表示（ワークスペース俯瞰）
+  if (viewMode === 'macro' && macroData) {
     return <MacroView data={macroData} />;
-  }
-
-  // 概要ビューの表示
-  if (viewMode === 'overview' && overviewData) {
-    return <OverviewView data={overviewData} />;
   }
 
   // ミクロビューの表示

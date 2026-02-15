@@ -1,10 +1,8 @@
 import * as vscode from 'vscode';
 import { TypeScriptParser } from './parsers/typescript/TypeScriptParser';
 import { IRTransformer } from './core/transformer/IRTransformer';
-import { MacroViewTransformer } from './core/transformer/MacroViewTransformer';
 import { FlowChartPanel } from './webview/FlowChartPanel';
 import { AIChatViewProvider } from './webview/AIChatViewProvider';
-import { ParserFactory } from './parsers/ParserFactory';
 import { IndexManager } from './core/index/IndexManager';
 import { ProjectScanner } from './core/index/ProjectScanner';
 import { Exporter } from './core/index/Exporter';
@@ -115,242 +113,6 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(visualizeCommand);
 
-  // マクロビュー切り替えコマンド
-  const switchToMacroCommand = vscode.commands.registerCommand(
-    'prismcode.switchToMacro',
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage('アクティブなエディタがありません');
-        return;
-      }
-
-      const document = editor.document;
-      const languageId = document.languageId;
-
-      if (
-        languageId !== 'typescript' &&
-        languageId !== 'typescriptreact' &&
-        languageId !== 'javascript' &&
-        languageId !== 'javascriptreact'
-      ) {
-        vscode.window.showErrorMessage(
-          `現在、TypeScript/JavaScriptのみサポートしています（現在: ${languageId}）`
-        );
-        return;
-      }
-
-      try {
-        const code = document.getText();
-        const filePath = document.fileName;
-
-        vscode.window.showInformationMessage('マクロビューを生成中...');
-        const parser = new TypeScriptParser();
-        const ast = parser.parse(code, filePath);
-
-        // マクロビュー用のデータを生成
-        const macroTransformer = new MacroViewTransformer();
-        const macroData = macroTransformer.transform(ast, {
-          language: parser.getSupportedLanguage(),
-          file: filePath,
-        });
-
-        // パネルを開いてマクロビューを表示
-        const panel = FlowChartPanel.createOrShow(context.extensionUri);
-        panel.updateMacroView(macroData);
-
-        vscode.window.showInformationMessage(
-          `マクロビューを生成しました（関数: ${macroData.functions.length}個）`
-        );
-      } catch (error: any) {
-        vscode.window.showErrorMessage(
-          `エラーが発生しました: ${error.message}`
-        );
-        console.error('マクロビュー生成エラー:', error);
-      }
-    }
-  );
-
-  // ミクロビュー切り替えコマンド
-  const switchToMicroCommand = vscode.commands.registerCommand(
-    'prismcode.switchToMicro',
-    async () => {
-      const editor = vscode.window.activeTextEditor;
-      if (!editor) {
-        vscode.window.showErrorMessage('アクティブなエディタがありません');
-        return;
-      }
-
-      const document = editor.document;
-      const languageId = document.languageId;
-
-      if (
-        languageId !== 'typescript' &&
-        languageId !== 'typescriptreact' &&
-        languageId !== 'javascript' &&
-        languageId !== 'javascriptreact'
-      ) {
-        vscode.window.showErrorMessage(
-          `現在、TypeScript/JavaScriptのみサポートしています（現在: ${languageId}）`
-        );
-        return;
-      }
-
-      try {
-        const code = document.getText();
-        const filePath = document.fileName;
-
-        vscode.window.showInformationMessage('ミクロビューを生成中...');
-        const parser = new TypeScriptParser();
-        const ast = parser.parse(code, filePath);
-
-        // IRに変換（ミクロビュー）
-        const transformer = new IRTransformer();
-        const ir = transformer.transform(ast, {
-          language: parser.getSupportedLanguage(),
-          file: filePath,
-        });
-
-        // パネルを開いてミクロビューを表示
-        const panel = FlowChartPanel.createOrShow(context.extensionUri);
-        panel.updateFlowChart(ir);
-
-        vscode.window.showInformationMessage(
-          `ミクロビューを生成しました（ノード: ${ir.nodes.length}個）`
-        );
-      } catch (error: any) {
-        vscode.window.showErrorMessage(
-          `エラーが発生しました: ${error.message}`
-        );
-        console.error('ミクロビュー生成エラー:', error);
-      }
-    }
-  );
-
-  context.subscriptions.push(switchToMacroCommand, switchToMicroCommand);
-
-  // ワークスペース全体のマクロビューを表示するコマンド
-  const showWorkspaceMacroCommand = vscode.commands.registerCommand(
-    'prismcode.showWorkspaceMacroView',
-    async () => {
-      try {
-        // ワークスペースフォルダが開かれているか確認
-        if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
-          vscode.window.showErrorMessage('ワークスペースが開かれていません');
-          return;
-        }
-
-        vscode.window.showInformationMessage('ワークスペース全体をスキャン中...');
-
-        // サポートされているすべての拡張子のファイルを検索
-        const globPattern = ParserFactory.getGlobPattern();
-        console.log('Searching files with pattern:', globPattern);
-
-        const files = await vscode.workspace.findFiles(
-          globPattern,
-          '**/node_modules/**'
-        );
-
-        console.log(`Found ${files.length} files`);
-
-        if (files.length === 0) {
-          const supportedLanguages = ParserFactory.getSupportedLanguages().join(', ');
-          vscode.window.showWarningMessage(
-            `サポートされている言語のファイルが見つかりませんでした (${supportedLanguages})`
-          );
-          return;
-        }
-
-        const macroTransformer = new MacroViewTransformer();
-
-        // 全ファイルの関数情報を収集
-        const allFunctions: any[] = [];
-        const allCallGraph: any[] = [];
-        const processedLanguages = new Set<string>();
-
-        let processedFiles = 0;
-        const maxFiles = Math.min(files.length, 100); // 最大100ファイルまで処理
-
-        for (const file of files.slice(0, maxFiles)) {
-          try {
-            // ファイルパスから適切なパーサーを取得
-            const parser = ParserFactory.getParser(file.fsPath);
-            if (!parser) {
-              console.warn(`No parser found for file: ${file.fsPath}`);
-              continue;
-            }
-
-            const document = await vscode.workspace.openTextDocument(file);
-            const code = document.getText();
-            const filePath = file.fsPath;
-
-            // ファイルをパース
-            const ast = parser.parse(code, filePath);
-
-            // マクロビューデータを生成
-            const macroData = macroTransformer.transform(ast, {
-              language: parser.getSupportedLanguage(),
-              file: filePath,
-            });
-
-            // 関数情報を追加（ファイル名と言語も含める）
-            for (const func of macroData.functions) {
-              allFunctions.push({
-                ...func,
-                sourceFile: vscode.workspace.asRelativePath(filePath),
-                language: parser.getSupportedLanguage(),
-              });
-            }
-
-            // コールグラフを追加
-            allCallGraph.push(...macroData.callGraph);
-
-            processedLanguages.add(parser.getSupportedLanguage());
-            processedFiles++;
-          } catch (error) {
-            console.error(`Failed to parse file ${file.fsPath}:`, error);
-          }
-        }
-
-        console.log(`Processed ${processedFiles} files, found ${allFunctions.length} functions`);
-
-        if (allFunctions.length === 0) {
-          vscode.window.showWarningMessage('関数が見つかりませんでした');
-          return;
-        }
-
-        // 統合されたマクロビューデータを作成
-        const languageList = Array.from(processedLanguages).join(', ');
-        const workspaceMacroData = {
-          metadata: {
-            sourceLanguage: languageList,
-            sourceFile: 'Workspace',
-            timestamp: Date.now(),
-            fileCount: processedFiles,
-            totalFiles: files.length,
-          },
-          functions: allFunctions,
-          callGraph: allCallGraph,
-        };
-
-        // パネルを開いてマクロビューを表示
-        const panel = FlowChartPanel.createOrShow(context.extensionUri);
-        panel.updateMacroView(workspaceMacroData);
-
-        vscode.window.showInformationMessage(
-          `ワークスペースマクロビューを生成しました（${processedFiles}ファイル, ${allFunctions.length}関数）`
-        );
-      } catch (error: any) {
-        vscode.window.showErrorMessage(
-          `エラーが発生しました: ${error.message}`
-        );
-        console.error('ワークスペースマクロビュー生成エラー:', error);
-      }
-    }
-  );
-
-  context.subscriptions.push(showWorkspaceMacroCommand);
-
   // プロジェクトインデックス生成コマンド
   const generateIndexCommand = vscode.commands.registerCommand(
     'prismcode.generateIndex',
@@ -391,9 +153,9 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
-  // マクロビューデータ生成コマンド
-  const generateMacroViewDataCommand = vscode.commands.registerCommand(
-    'prismcode.generateMacroViewData',
+  // マクロビュー（ワークスペース全体の俯瞰）コマンド
+  const showMacroViewCommand = vscode.commands.registerCommand(
+    'prismcode.showMacroView',
     async () => {
       try {
         if (!indexManager) {
@@ -406,7 +168,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         }
 
-        vscode.window.showInformationMessage('マクロビューデータを生成中...');
+        vscode.window.showInformationMessage('マクロビュー（ワークスペース俯瞰）を生成中...');
 
         const scanner = new ProjectScanner(indexManager);
 
@@ -500,7 +262,7 @@ export function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     generateIndexCommand,
-    generateMacroViewDataCommand,
+    showMacroViewCommand,
     exportForAIToolsCommand,
     loadCachedMacroViewCommand
   );

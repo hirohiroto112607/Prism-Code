@@ -35,20 +35,14 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
           // TODO: Phase 3でGemini APIと統合
           this._handleUserMessage(message.text);
           break;
-        case 'switchToMacro':
-          vscode.commands.executeCommand('prismcode.switchToMacro');
+        case 'visualize':
+          vscode.commands.executeCommand('prismcode.visualize');
           break;
-        case 'switchToMicro':
-          vscode.commands.executeCommand('prismcode.switchToMicro');
-          break;
-        case 'showWorkspaceMacro':
-          vscode.commands.executeCommand('prismcode.showWorkspaceMacroView');
+        case 'showMacroView':
+          vscode.commands.executeCommand('prismcode.showMacroView');
           break;
         case 'generateIndex':
           vscode.commands.executeCommand('prismcode.generateIndex');
-          break;
-        case 'generateMacroData':
-          vscode.commands.executeCommand('prismcode.generateMacroViewData');
           break;
         case 'loadCachedMacro':
           vscode.commands.executeCommand('prismcode.loadCachedMacroView');
@@ -262,7 +256,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         <div class="section">
           <div class="section-title">📊 Visualizations</div>
           <div class="button-grid">
-            <button class="action-button" id="microButton">
+            <button class="action-button" id="visualizeButton">
               <div class="btn-header">
                 <span class="btn-icon">🔬</span>
                 <span>ミクロビュー (詳細フロー)</span>
@@ -272,16 +266,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
             <button class="action-button" id="macroButton">
               <div class="btn-header">
                 <span class="btn-icon">🔭</span>
-                <span>マクロビュー (俯瞰)</span>
+                <span>マクロビュー (ワークスペース俯瞰)</span>
               </div>
-              <div class="btn-desc">現在のファイルの関数構造を表示</div>
-            </button>
-            <button class="action-button" id="workspaceMacroButton">
-              <div class="btn-header">
-                <span class="btn-icon">🌍</span>
-                <span>ワークスペースマクロ</span>
-              </div>
-              <div class="btn-desc">プロジェクト全体の構造を俯瞰</div>
+              <div class="btn-desc">プロジェクト全体の関数構造を表示</div>
             </button>
           </div>
         </div>
@@ -296,13 +283,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
                 <span>プロジェクトをスキャン</span>
               </div>
               <div class="btn-desc">インデックスを作成して解析を高速化</div>
-            </button>
-            <button class="action-button" id="generateMacroDataButton">
-              <div class="btn-header">
-                <span class="btn-icon">📦</span>
-                <span>マクロデータを生成</span>
-              </div>
-              <div class="btn-desc">大規模プロジェクト用データをキャッシュ</div>
             </button>
             <button class="action-button" id="loadCachedButton">
               <div class="btn-header">
@@ -351,11 +331,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       const sendButton = document.getElementById('sendButton');
       
       // Buttons
-      const microButton = document.getElementById('microButton');
+      const visualizeButton = document.getElementById('visualizeButton');
       const macroButton = document.getElementById('macroButton');
-      const workspaceMacroButton = document.getElementById('workspaceMacroButton');
       const generateIndexButton = document.getElementById('generateIndexButton');
-      const generateMacroDataButton = document.getElementById('generateMacroDataButton');
       const loadCachedButton = document.getElementById('loadCachedButton');
       const exportAIButton = document.getElementById('exportAIButton');
 
@@ -377,11 +355,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       }
 
       // Event Listeners for Commands
-      microButton.addEventListener('click', () => vscode.postMessage({ type: 'switchToMicro' }));
-      macroButton.addEventListener('click', () => vscode.postMessage({ type: 'switchToMacro' }));
-      workspaceMacroButton.addEventListener('click', () => vscode.postMessage({ type: 'showWorkspaceMacro' }));
+      visualizeButton.addEventListener('click', () => vscode.postMessage({ type: 'visualize' }));
+      macroButton.addEventListener('click', () => vscode.postMessage({ type: 'showMacroView' }));
       generateIndexButton.addEventListener('click', () => vscode.postMessage({ type: 'generateIndex' }));
-      generateMacroDataButton.addEventListener('click', () => vscode.postMessage({ type: 'generateMacroData' }));
       loadCachedButton.addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
       exportAIButton.addEventListener('click', () => vscode.postMessage({ type: 'exportAI' }));
 

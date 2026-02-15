@@ -380,14 +380,6 @@ export function MacroView({ data }: MacroViewProps) {
     }
   }, []);
 
-  const switchToMicroView = useCallback(() => {
-    vscode.postMessage({ type: 'switchViewMode', viewMode: 'micro' });
-  }, []);
-
-  const switchToOverviewView = useCallback(() => {
-    vscode.postMessage({ type: 'switchViewMode', viewMode: 'overview' });
-  }, []);
-
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#1e1e1e' }}>
       <ReactFlow
@@ -440,64 +432,6 @@ export function MacroView({ data }: MacroViewProps) {
                 </>
               )}
             </p>
-          </div>
-        </Panel>
-
-        {/* パネル: ビュー切替 */}
-        <Panel position="bottom-left">
-          <div
-            style={{
-              background: 'rgba(30, 30, 30, 0.95)',
-              padding: '12px',
-              borderRadius: '8px',
-              border: '1px solid #404040',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '8px',
-            }}
-          >
-            <div
-              style={{
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: '#9ca3af',
-                marginBottom: '4px',
-              }}
-            >
-              ビュー切替
-            </div>
-            <button
-              onClick={switchToMicroView}
-              style={{
-                padding: '8px 16px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: '#fff',
-                background: '#60a5fa',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              🔬 ミクロビュー
-            </button>
-            <button
-              onClick={switchToOverviewView}
-              style={{
-                padding: '8px 16px',
-                fontSize: '12px',
-                fontWeight: 'bold',
-                color: '#fff',
-                background: '#764ba2',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              📊 概要ビュー
-            </button>
           </div>
         </Panel>
 
