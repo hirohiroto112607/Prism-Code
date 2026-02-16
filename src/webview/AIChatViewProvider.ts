@@ -356,7 +356,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
 
       // Event Listeners for Commands
       visualizeButton.addEventListener('click', () => vscode.postMessage({ type: 'visualize' }));
-      macroButton.addEventListener('click', () => vscode.postMessage({ type: 'showMacroView' }));
+      macroButton.addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
       generateIndexButton.addEventListener('click', () => vscode.postMessage({ type: 'generateIndex' }));
       loadCachedButton.addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
       exportAIButton.addEventListener('click', () => vscode.postMessage({ type: 'exportAI' }));

@@ -68,7 +68,7 @@ export function OverviewView({ data }: OverviewViewProps) {
         <StatCard
           title="平均行数"
           value={Math.round(
-            data.functions.reduce((sum, f) => sum + f.lineCount, 0) /
+            data.functions.reduce((sum: number, f: any) => sum + f.lineCount, 0) /
               data.functions.length || 0
           )}
           icon="📝"
@@ -77,7 +77,7 @@ export function OverviewView({ data }: OverviewViewProps) {
         <StatCard
           title="平均複雑度"
           value={Math.round(
-            data.functions.reduce((sum, f) => sum + f.complexity, 0) /
+            data.functions.reduce((sum: number, f: any) => sum + f.complexity, 0) /
               data.functions.length || 0
           )}
           icon="⚙️"
@@ -103,7 +103,7 @@ export function OverviewView({ data }: OverviewViewProps) {
             gap: '15px',
           }}
         >
-          {data.functions.map((func) => (
+          {data.functions.map((func: any) => (
             <FunctionCard key={func.id} func={func} />
           ))}
         </div>
@@ -130,7 +130,7 @@ export function OverviewView({ data }: OverviewViewProps) {
               border: '1px solid #404040',
             }}
           >
-            {data.callGraph.map((call) => (
+            {data.callGraph.map((call: any) => (
               <div
                 key={call.id}
                 style={{

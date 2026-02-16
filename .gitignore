@@ -58,3 +58,8 @@ logs/
 # デバッグ用サンプルファイル
 sample/
 !sample/sample.ts
+
+# テストカバレッジ
+coverage/
+webview-ui/coverage/
+.nyc_output/

@@ -22,9 +22,10 @@ export class ParserFactory {
   /**
    * ファイルパスから適切なパーサーを取得
    * @param filePath ファイルパス
-   * @returns パーサー（見つからない場合はundefined）
+   * @returns パーサー
+   * @throws サポートされていないファイル形式の場合
    */
-  static getParser(filePath: string): IParser | undefined {
+  static getParser(filePath: string): IParser {
     const ext = path.extname(filePath);
 
     for (const parser of this.parsers) {
@@ -34,7 +35,7 @@ export class ParserFactory {
       }
     }
 
-    return undefined;
+    throw new Error(`サポートされていないファイル形式です: ${ext}`);
   }
 
   /**

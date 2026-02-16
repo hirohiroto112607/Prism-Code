@@ -10,7 +10,6 @@ import ReactFlow, {
   Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { vscode } from '../vscode-api';
 
 interface MacroViewProps {
   data?: any;
@@ -374,7 +373,7 @@ export function MacroView({ data }: MacroViewProps) {
     setEdges(newEdges);
   }, [data, setNodes, setEdges]);
 
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeClick = useCallback((_event: React.MouseEvent, node: Node) => {
     if (node.type === 'group') {
       setSelectedFeature(node.id);
     }
