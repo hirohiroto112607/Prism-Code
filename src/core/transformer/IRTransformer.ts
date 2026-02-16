@@ -69,7 +69,6 @@ export class IRTransformer {
    */
   private transformFunction(fn: any): string {
     const startId = this.generateNodeId();
-    const endId = this.generateNodeId();
 
     // 開始ノード
     this.nodes.push({
@@ -97,6 +96,9 @@ export class IRTransformer {
       // 現在の出口を更新
       currentExits = exitIds;
     }
+
+    // 終了ノード（ループ後に生成して正しい順序にする）
+    const endId = this.generateNodeId();
 
     // 終了ノード
     this.nodes.push({
