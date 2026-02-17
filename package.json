@@ -33,6 +33,14 @@
       {
         "command": "prismcode.loadCachedMacroView",
         "title": "Prism Code: キャッシュからマクロビューを読み込み"
+      },
+      {
+        "command": "prismcode.showCacheStats",
+        "title": "Prism Code: キャッシュ統計を表示"
+      },
+      {
+        "command": "prismcode.clearCache",
+        "title": "Prism Code: キャッシュをクリア"
       }
     ],
     "viewsContainers": {
@@ -74,9 +82,10 @@
   },
   "scripts": {
     "vscode:prepublish": "pnpm run compile && pnpm run compile:webview",
+    "build": "pnpm run compile && pnpm run compile:webview",
     "compile": "tsc -p ./",
     "compile:webview": "pnpm --dir webview-ui run build",
-    "watch": "pnpm run compile:webview && tsc -watch -p ./",
+    "watch": "tsc -watch -p ./",
     "pretest": "pnpm run compile && pnpm run compile:test",
     "compile:test": "tsc -p ./",
     "test": "node ./out/test/runTest.js",

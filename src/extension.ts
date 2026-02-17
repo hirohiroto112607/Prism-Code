@@ -1,11 +1,44 @@
 import * as vscode from 'vscode';
-import { TypeScriptParser } from './parsers/typescript/TypeScriptParser';
-import { IRTransformer } from './core/transformer/IRTransformer';
 import { FlowChartPanel } from './webview/FlowChartPanel';
 import { AIChatViewProvider } from './webview/AIChatViewProvider';
 import { IndexManager } from './core/index/IndexManager';
 import { ProjectScanner } from './core/index/ProjectScanner';
 import { Exporter } from './core/index/Exporter';
+import { CacheManager } from './core/cache/CacheManager';
+
+/**
+ * ファイル変更監視を設定
+ * TypeScript/JavaScriptファイルの変更時にキャッシュを自動無効化
+ */
+function setupFileWatcher(cacheManager: CacheManager, context: vscode.ExtensionContext): void {
+  // TypeScript/JavaScriptファイルを監視
+  const watcher = vscode.workspace.createFileSystemWatcher(
+    '**/*.{ts,tsx,js,jsx}',
+    false, // onCreate
+    false, // onChange
+    false  // onDelete
+  );
+
+  // ファイル変更時
+  watcher.onDidChange(async (uri) => {
+    console.log(`📝 ファイル変更検出: ${uri.fsPath}`);
+    await cacheManager.invalidateCache(uri.fsPath);
+  });
+
+  // ファイル作成時
+  watcher.onDidCreate(async (uri) => {
+    console.log(`➕ ファイル作成検出: ${uri.fsPath}`);
+    // 新規ファイルはキャッシュがないので何もしない
+  });
+
+  // ファイル削除時
+  watcher.onDidDelete(async (uri) => {
+    console.log(`🗑️ ファイル削除検出: ${uri.fsPath}`);
+    await cacheManager.invalidateCache(uri.fsPath);
+  });
+
+  context.subscriptions.push(watcher);
+}
 
 /**
  * 拡張機能のアクティベーション
@@ -13,16 +46,28 @@ import { Exporter } from './core/index/Exporter';
 export function activate(context: vscode.ExtensionContext) {
   console.log('Prism Code が起動しました！');
 
-  // IndexManagerの初期化
+  // IndexManagerとCacheManagerの初期化
   let indexManager: IndexManager | undefined;
+  let cacheManager: CacheManager | undefined;
   const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
 
   if (workspaceFolder) {
     indexManager = new IndexManager(workspaceFolder.uri.fsPath);
-    // .prismcodeフォルダーを初期化
+    // .prismcodeフォルダーを初期化（非同期）
     indexManager.initialize().catch((error) => {
       console.error('.prismcode初期化エラー:', error);
     });
+
+    // CacheManagerを初期化
+    cacheManager = new CacheManager(indexManager);
+    console.log('✅ CacheManager初期化完了');
+
+    // ファイル変更監視の設定
+    const config = indexManager.getConfig();
+    if (config?.autoUpdate) {
+      setupFileWatcher(cacheManager, context);
+      console.log('✅ ファイル監視を有効化（自動キャッシュ無効化）');
+    }
   }
 
   // サイドバーにAIチャットビューを登録
@@ -70,23 +115,31 @@ export function activate(context: vscode.ExtensionContext) {
         const filePath = document.fileName;
         console.log('📝 Code length:', code.length);
 
-        // パーサーでASTを生成
-        vscode.window.showInformationMessage('コードを解析中...');
-        console.log('🔍 Parsing code...');
-        const parser = new TypeScriptParser();
-        const ast = parser.parse(code, filePath);
-        console.log('✅ AST generated:', ast.body.length, 'nodes');
+        if (!cacheManager) {
+          vscode.window.showErrorMessage('CacheManagerが初期化されていません');
+          return;
+        }
 
-        // ASTをIRに変換
-        console.log('🔄 Transforming to IR...');
-        const transformer = new IRTransformer();
-        const ir = transformer.transform(ast, {
-          language: parser.getSupportedLanguage(),
-          file: filePath,
-        });
-        console.log('✅ IR generated:', {
+        // キャッシュを使用してIRを取得（自動的にAST→IR変換も行われる）
+        vscode.window.showInformationMessage('コードを解析中...');
+        console.log('🔍 Getting IR (cache-aware)...');
+
+        const irResult = await cacheManager.getIR(filePath, code);
+
+        if (irResult.hit) {
+          console.log(`✅ キャッシュから取得 (${irResult.processingTime}ms)`);
+          vscode.window.showInformationMessage(
+            `キャッシュから読み込みました（${irResult.processingTime}ms）`
+          );
+        } else {
+          console.log(`✅ 新規生成 (${irResult.processingTime}ms)`);
+        }
+
+        const ir = irResult.data!;
+        console.log('✅ IR ready:', {
           nodes: ir.nodes.length,
-          edges: ir.edges.length
+          edges: ir.edges.length,
+          source: irResult.source,
         });
 
         // エディタエリアにフローチャートパネルを開く
@@ -98,8 +151,9 @@ export function activate(context: vscode.ExtensionContext) {
         panel.updateFlowChart(ir);
         console.log('✅ Flowchart updated');
 
+        const cacheStatus = irResult.hit ? '（キャッシュ）' : '（新規生成）';
         vscode.window.showInformationMessage(
-          `フローチャートを生成しました（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`
+          `フローチャートを生成しました ${cacheStatus}（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個, ${irResult.processingTime}ms）`
         );
       } catch (error: any) {
         console.error('❌ Visualization error:', error);
@@ -133,6 +187,9 @@ export function activate(context: vscode.ExtensionContext) {
         console.log('ワークスペースフォルダー数:', vscode.workspace.workspaceFolders?.length);
 
         vscode.window.showInformationMessage('プロジェクトをスキャン中...');
+
+        // 設定とインデックスを事前にロード（スキャン前に完了を保証）
+        await indexManager.initialize();
 
         const scanner = new ProjectScanner(indexManager);
         const projectIndex = await scanner.scanProject(workspaceRoot);
@@ -169,6 +226,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         vscode.window.showInformationMessage('マクロビュー（ワークスペース俯瞰）を生成中...');
+
+        // 設定とインデックスを事前にロード
+        await indexManager.initialize();
 
         const scanner = new ProjectScanner(indexManager);
 
@@ -210,6 +270,9 @@ export function activate(context: vscode.ExtensionContext) {
         }
 
         vscode.window.showInformationMessage('AIツール向けコンテキストをエクスポート中...');
+
+        // 設定とインデックスを事前にロード
+        await indexManager.initialize();
 
         const exporter = new Exporter(indexManager, workspaceRoot);
         await exporter.exportAll();
@@ -260,11 +323,75 @@ export function activate(context: vscode.ExtensionContext) {
     }
   );
 
+  // キャッシュ統計表示コマンド
+  const showCacheStatsCommand = vscode.commands.registerCommand(
+    'prismcode.showCacheStats',
+    async () => {
+      try {
+        if (!cacheManager) {
+          vscode.window.showErrorMessage('CacheManagerが初期化されていません');
+          return;
+        }
+
+        const stats = await cacheManager.getStats();
+
+        const message = `
+📊 Prism Code キャッシュ統計
+
+📁 総ファイル数: ${stats.totalFiles}
+💾 キャッシュ済みファイル: ${stats.cachedFiles}
+📈 キャッシュヒット率: ${stats.cacheHitRate.toFixed(2)}%
+💿 キャッシュサイズ: ${(stats.totalCacheSize / 1024 / 1024).toFixed(2)} MB
+        `.trim();
+
+        vscode.window.showInformationMessage(message, { modal: true });
+        console.log('キャッシュ統計:', stats);
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `統計取得エラー: ${error.message}`
+        );
+        console.error('統計取得エラー:', error);
+      }
+    }
+  );
+
+  // キャッシュクリアコマンド
+  const clearCacheCommand = vscode.commands.registerCommand(
+    'prismcode.clearCache',
+    async () => {
+      try {
+        if (!cacheManager) {
+          vscode.window.showErrorMessage('CacheManagerが初期化されていません');
+          return;
+        }
+
+        const answer = await vscode.window.showWarningMessage(
+          'すべてのキャッシュをクリアしますか？次回の可視化時に再生成されます。',
+          { modal: true },
+          'クリア',
+          'キャンセル'
+        );
+
+        if (answer === 'クリア') {
+          await cacheManager.clearAllCaches();
+          vscode.window.showInformationMessage('✅ キャッシュをクリアしました');
+        }
+      } catch (error: any) {
+        vscode.window.showErrorMessage(
+          `キャッシュクリアエラー: ${error.message}`
+        );
+        console.error('キャッシュクリアエラー:', error);
+      }
+    }
+  );
+
   context.subscriptions.push(
     generateIndexCommand,
     showMacroViewCommand,
     exportForAIToolsCommand,
-    loadCachedMacroViewCommand
+    loadCachedMacroViewCommand,
+    showCacheStatsCommand,
+    clearCacheCommand
   );
 }
 

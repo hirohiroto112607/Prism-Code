@@ -36,10 +36,18 @@ export class IndexManager {
    */
   async initialize(): Promise<void> {
     // .prismcodeディレクトリが存在しない場合は作成
+    let needsInit = false;
     try {
       await fs.access(this.prismcodeDir);
     } catch {
+      needsInit = true;
+    }
+
+    if (needsInit) {
       await this.createPrismcodeStructure();
+    } else {
+      // ディレクトリが存在しても、サブディレクトリを保証
+      await this.ensureDirectories();
     }
 
     // インデックスと設定を読み込み
@@ -48,11 +56,31 @@ export class IndexManager {
   }
 
   /**
+   * 必要なディレクトリが存在しない場合は作成
+   */
+  private async ensureDirectories(): Promise<void> {
+    const dirs = [
+      path.join(this.prismcodeDir, 'cache', 'ir-cache'),
+      path.join(this.prismcodeDir, 'analysis'),
+      path.join(this.prismcodeDir, 'exports', 'markdown'),
+      path.join(this.prismcodeDir, 'exports', 'ai-context'),
+    ];
+
+    for (const dir of dirs) {
+      try {
+        await fs.access(dir);
+      } catch {
+        await fs.mkdir(dir, { recursive: true });
+        console.log(`ディレクトリ作成: ${dir}`);
+      }
+    }
+  }
+
+  /**
    * .prismcodeフォルダー構造を作成
    */
   private async createPrismcodeStructure(): Promise<void> {
     await fs.mkdir(this.prismcodeDir, { recursive: true });
-    await fs.mkdir(path.join(this.prismcodeDir, 'cache', 'ast-cache'), { recursive: true });
     await fs.mkdir(path.join(this.prismcodeDir, 'cache', 'ir-cache'), { recursive: true });
     await fs.mkdir(path.join(this.prismcodeDir, 'analysis'), { recursive: true });
     await fs.mkdir(path.join(this.prismcodeDir, 'exports', 'markdown'), { recursive: true });
@@ -383,33 +411,6 @@ index.json
       return JSON.parse(content);
     } catch (error) {
       console.error('AIサマリー読み込みエラー:', error);
-      return undefined;
-    }
-  }
-
-  /**
-   * ASTキャッシュを保存
-   */
-  async saveASTCache(filePath: string, ast: any): Promise<void> {
-    const relativePath = path.relative(this.workspaceRoot, filePath);
-    const cacheFileName = relativePath.replace(/[\/\\]/g, '-').replace(/\./g, '-') + '.json';
-    const cachePath = path.join(this.prismcodeDir, 'cache', 'ast-cache', cacheFileName);
-
-    await fs.writeFile(cachePath, JSON.stringify(ast, null, 2), 'utf-8');
-  }
-
-  /**
-   * ASTキャッシュを読み込み
-   */
-  async loadASTCache(filePath: string): Promise<any | undefined> {
-    try {
-      const relativePath = path.relative(this.workspaceRoot, filePath);
-      const cacheFileName = relativePath.replace(/[\/\\]/g, '-').replace(/\./g, '-') + '.json';
-      const cachePath = path.join(this.prismcodeDir, 'cache', 'ast-cache', cacheFileName);
-
-      const content = await fs.readFile(cachePath, 'utf-8');
-      return JSON.parse(content);
-    } catch (error) {
       return undefined;
     }
   }

@@ -123,8 +123,6 @@ export class ProjectScanner {
     // パース
     const ast = this.parser.parse(code, filePath);
 
-    // ASTをキャッシュ
-    await this.indexManager.saveASTCache(filePath, ast);
 
     // IR変換
     const ir = this.transformer.transform(ast, {
@@ -132,8 +130,14 @@ export class ProjectScanner {
       file: relativePath,
     });
 
-    // IRをキャッシュ
-    await this.indexManager.saveIRCache(filePath, ir);
+    // IRをCacheEntry形式でキャッシュ（CacheManagerと互換性を保つ）
+    const cacheEntry = {
+      data: ir,
+      timestamp: Date.now(),
+      fileHash,
+      filePath,
+    };
+    await this.indexManager.saveIRCache(filePath, cacheEntry);
 
     // メトリクスを計算
     const lineCount = code.split('\n').length;
@@ -257,9 +261,14 @@ export class ProjectScanner {
     for (const file of projectIndex.files) {
       const filePath = path.join(workspaceRoot, file.filePath);
 
-      // IRキャッシュを読み込み
-      const ir = await this.indexManager.loadIRCache(filePath);
-      if (!ir) {
+      // IRキャッシュを読み込み（CacheEntry形式 or 直接IR形式の両方に対応）
+      const cached = await this.indexManager.loadIRCache(filePath);
+      if (!cached) {
+        continue;
+      }
+      // CacheEntry形式（{ data: IR, timestamp, ... }）の場合は.dataを取得
+      const ir = cached.nodes ? cached : cached.data;
+      if (!ir?.nodes) {
         continue;
       }
 
