@@ -77,7 +77,38 @@
     },
     "configuration": {
       "title": "Prism Code",
-      "properties": {}
+      "properties": {
+        "prismcode.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Gemini APIキー（Google AI Studio: https://aistudio.google.com/apikey で取得）",
+          "scope": "application"
+        },
+        "prismcode.useGeminiAnalysis": {
+          "type": "boolean",
+          "default": false,
+          "description": "trueの場合、ts-morphの代わりにGemini APIでコードを解析します（APIキーが必要）",
+          "scope": "resource"
+        },
+        "prismcode.geminiModel": {
+          "type": "string",
+          "default": "gemini-2.0-flash-lite",
+          "enum": [
+            "gemini-2.0-flash-lite",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash-8b",
+            "gemini-1.5-pro"
+          ],
+          "enumDescriptions": [
+            "無料枠対応・高速（推奨）",
+            "高精度（有料プラン推奨）",
+            "軽量モデル・無料枠対応",
+            "最高精度（有料プラン必要）"
+          ],
+          "description": "使用するGeminiモデル。無料枠の場合は gemini-2.0-flash-lite を選択してください。",
+          "scope": "resource"
+        }
+      }
     }
   },
   "scripts": {
@@ -110,6 +141,8 @@
     "typescript": "^5.3.0"
   },
   "dependencies": {
+    "@google/genai": "^1.42.0",
     "ts-morph": "^21.0.0"
-  }
+  },
+  "packageManager": "pnpm@10.30.3+sha512.c961d1e0a2d8e354ecaa5166b822516668b7f44cb5bd95122d590dd81922f606f5473b6d23ec4a5be05e7fcd18e8488d47d978bbe981872f1145d06e9a740017"
 }

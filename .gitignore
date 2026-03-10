@@ -63,3 +63,4 @@ sample/
 coverage/
 webview-ui/coverage/
 .nyc_output/
+docs/private/

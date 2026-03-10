@@ -5,6 +5,8 @@ import { IndexManager } from './core/index/IndexManager';
 import { ProjectScanner } from './core/index/ProjectScanner';
 import { Exporter } from './core/index/Exporter';
 import { CacheManager } from './core/cache/CacheManager';
+import { GeminiAnalyzer, GeminiQuotaError } from './core/ai/GeminiAnalyzer';
+import { IR } from './core/ir/IR';
 
 /**
  * ファイル変更監視を設定
@@ -115,32 +117,76 @@ export function activate(context: vscode.ExtensionContext) {
         const filePath = document.fileName;
         console.log('📝 Code length:', code.length);
 
-        if (!cacheManager) {
-          vscode.window.showErrorMessage('CacheManagerが初期化されていません');
+        // Gemini使用フラグをVSCode設定から読み込み
+        const config = vscode.workspace.getConfiguration('prismcode');
+        const useGemini = config.get<boolean>('useGeminiAnalysis', false);
+
+        let ir: IR;
+
+        if (useGemini) {
+          // --- Gemini解析パス ---
+          const apiKey = config.get<string>('geminiApiKey', '');
+          if (!apiKey) {
+            const action = await vscode.window.showErrorMessage(
+              'Gemini APIキーが設定されていません。設定でprismcode.geminiApiKeyを入力してください。',
+              '設定を開く'
+            );
+            if (action === '設定を開く') {
+              await vscode.commands.executeCommand(
+                'workbench.action.openSettings',
+                'prismcode.geminiApiKey'
+              );
+            }
+            return;
+          }
+
+          const modelName = config.get<string>('geminiModel', 'gemini-2.0-flash-lite');
+          console.log(`🤖 Gemini APIでコードを解析中... (model: ${modelName})`);
+          vscode.window.showInformationMessage(`Gemini APIでコードを解析中... (${modelName})`);
+
+          const analyzer = new GeminiAnalyzer(apiKey, modelName);
+          ir = await analyzer.analyzeCode(code, filePath);
+
+          console.log('✅ Gemini解析完了:', {
+            nodes: ir.nodes.length,
+            edges: ir.edges.length,
+          });
+        } else {
+          // --- 既存のts-morphパス ---
+          if (!cacheManager) {
+            vscode.window.showErrorMessage('CacheManagerが初期化されていません');
+            return;
+          }
+
+          vscode.window.showInformationMessage('コードを解析中...');
+          console.log('🔍 Getting IR (cache-aware)...');
+
+          const irResult = await cacheManager.getIR(filePath, code);
+
+          if (irResult.hit) {
+            console.log(`✅ キャッシュから取得 (${irResult.processingTime}ms)`);
+            vscode.window.showInformationMessage(
+              `キャッシュから読み込みました（${irResult.processingTime}ms）`
+            );
+          } else {
+            console.log(`✅ 新規生成 (${irResult.processingTime}ms)`);
+          }
+
+          ir = irResult.data!;
+          console.log('✅ IR ready:', {
+            nodes: ir.nodes.length,
+            edges: ir.edges.length,
+            source: irResult.source,
+          });
+        }
+
+        // 関数が見つからない場合は早期リターン
+        if (ir.nodes.length === 0) {
+          vscode.window.showWarningMessage(
+            `可視化できる関数定義が見つかりませんでした。このファイルには関数宣言やアロー関数が含まれていない可能性があります（例: モジュールレベルの実行コードのみのファイル）。`
+          );
           return;
         }
-
-        // キャッシュを使用してIRを取得（自動的にAST→IR変換も行われる）
-        vscode.window.showInformationMessage('コードを解析中...');
-        console.log('🔍 Getting IR (cache-aware)...');
-
-        const irResult = await cacheManager.getIR(filePath, code);
-
-        if (irResult.hit) {
-          console.log(`✅ キャッシュから取得 (${irResult.processingTime}ms)`);
-          vscode.window.showInformationMessage(
-            `キャッシュから読み込みました（${irResult.processingTime}ms）`
-          );
-        } else {
-          console.log(`✅ 新規生成 (${irResult.processingTime}ms)`);
-        }
-
-        const ir = irResult.data!;
-        console.log('✅ IR ready:', {
-          nodes: ir.nodes.length,
-          edges: ir.edges.length,
-          source: irResult.source,
-        });
 
         // エディタエリアにフローチャートパネルを開く
         console.log('🎨 Creating/showing FlowChartPanel...');
@@ -151,16 +197,31 @@ export function activate(context: vscode.ExtensionContext) {
         panel.updateFlowChart(ir);
         console.log('✅ Flowchart updated');
 
-        const cacheStatus = irResult.hit ? '（キャッシュ）' : '（新規生成）';
+        const analysisMethod = useGemini ? '（Gemini API）' : '';
         vscode.window.showInformationMessage(
-          `フローチャートを生成しました ${cacheStatus}（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個, ${irResult.processingTime}ms）`
+          `フローチャートを生成しました${analysisMethod}（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`
         );
       } catch (error: any) {
         console.error('❌ Visualization error:', error);
         console.error('Stack trace:', error.stack);
-        vscode.window.showErrorMessage(
-          `エラーが発生しました: ${error.message}`
-        );
+
+        if (error instanceof GeminiQuotaError) {
+          const action = await vscode.window.showErrorMessage(
+            error.message,
+            'gemini-2.0-flash-lite に切り替える',
+            '設定を開く'
+          );
+          if (action === 'gemini-2.0-flash-lite に切り替える') {
+            await vscode.workspace
+              .getConfiguration('prismcode')
+              .update('geminiModel', 'gemini-2.0-flash-lite', vscode.ConfigurationTarget.Global);
+            vscode.window.showInformationMessage('モデルを gemini-2.0-flash-lite に変更しました。再度お試しください。');
+          } else if (action === '設定を開く') {
+            await vscode.commands.executeCommand('workbench.action.openSettings', 'prismcode.geminiModel');
+          }
+        } else {
+          vscode.window.showErrorMessage(`エラーが発生しました: ${error.message}`);
+        }
       }
     }
   );
