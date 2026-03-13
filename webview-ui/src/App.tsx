@@ -28,28 +28,29 @@ function App() {
 
       switch (message.type) {
         case 'updateFlow': {
-          try {
-            const ir: IR = message.data;
-            console.log('✅ updateFlow received:', {
-              nodes: ir.nodes?.length,
-              edges: ir.edges?.length,
-              data: ir
+          const ir: IR = message.data;
+          console.log('✅ updateFlow received:', {
+            nodes: ir.nodes?.length,
+            edges: ir.edges?.length,
+            data: ir
+          });
+          convertIRToReactFlow(ir)
+            .then(({ nodes: flowNodes, edges: flowEdges }) => {
+              console.log('✅ Converted to React Flow:', {
+                nodes: flowNodes.length,
+                edges: flowEdges.length
+              });
+              setNodes(flowNodes);
+              setEdges(flowEdges);
+              setViewMode('micro');
+              setError(null);
+              console.log('✅ State updated successfully');
+            })
+            .catch((err: unknown) => {
+              setError(err instanceof Error ? err.message : String(err));
+              console.error('❌ フロー変換エラー:', err);
+              if (err instanceof Error) console.error('Stack:', err.stack);
             });
-            const { nodes: flowNodes, edges: flowEdges } = convertIRToReactFlow(ir);
-            console.log('✅ Converted to React Flow:', {
-              nodes: flowNodes.length,
-              edges: flowEdges.length
-            });
-            setNodes(flowNodes);
-            setEdges(flowEdges);
-            setViewMode('micro');
-            setError(null);
-            console.log('✅ State updated successfully');
-          } catch (err: any) {
-            setError(err.message);
-            console.error('❌ フロー変換エラー:', err);
-            console.error('Stack:', err.stack);
-          }
           break;
         }
         case 'updateMacroView': {

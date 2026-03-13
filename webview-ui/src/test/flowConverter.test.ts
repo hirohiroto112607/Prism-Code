@@ -15,7 +15,7 @@ describe("flowConverter", () => {
       end: { line: 1, column: 10 },
     };
 
-    it("空のIRを変換できるべき", () => {
+    it("空のIRを変換できるべき", async () => {
       const ir: IR = {
         nodes: [],
         edges: [],
@@ -23,13 +23,13 @@ describe("flowConverter", () => {
         metadata: defaultMetadata,
       };
 
-      const result = convertIRToReactFlow(ir);
+      const result = await convertIRToReactFlow(ir);
 
       expect(result.nodes).toHaveLength(0);
       expect(result.edges).toHaveLength(0);
     });
 
-    it("開始ノードを正しく変換できるべき", () => {
+    it("開始ノードを正しく変換できるべき", async () => {
       const ir: IR = {
         nodes: [
           {
@@ -43,7 +43,7 @@ describe("flowConverter", () => {
         metadata: defaultMetadata,
       };
 
-      const result = convertIRToReactFlow(ir);
+      const result = await convertIRToReactFlow(ir);
 
       expect(result.nodes).toHaveLength(1);
       expect(result.nodes[0].id).toBe("node_0");
@@ -51,7 +51,7 @@ describe("flowConverter", () => {
       expect(result.nodes[0].data.label).toBe("関数開始: testFunction");
     });
 
-    it("エッジを正しく変換できるべき", () => {
+    it("エッジを正しく変換できるべき", async () => {
       const ir: IR = {
         nodes: [
           {
@@ -77,7 +77,7 @@ describe("flowConverter", () => {
         metadata: defaultMetadata,
       };
 
-      const result = convertIRToReactFlow(ir);
+      const result = await convertIRToReactFlow(ir);
 
       expect(result.edges).toHaveLength(1);
       expect(result.edges[0].id).toBe("edge_0");
@@ -86,7 +86,7 @@ describe("flowConverter", () => {
       expect(result.edges[0].type).toBe("smoothstep");
     });
 
-    it("複数のノードとエッジを変換できるべき", () => {
+    it("複数のノードとエッジを変換できるべき", async () => {
       const ir: IR = {
         nodes: [
           {
@@ -124,7 +124,7 @@ describe("flowConverter", () => {
         metadata: defaultMetadata,
       };
 
-      const result = convertIRToReactFlow(ir);
+      const result = await convertIRToReactFlow(ir);
 
       expect(result.nodes).toHaveLength(3);
       expect(result.edges).toHaveLength(2);

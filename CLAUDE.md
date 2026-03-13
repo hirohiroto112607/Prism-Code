@@ -619,7 +619,7 @@ cd webview-ui && pnpm run dev
 
 1. VSCodeで`F5`キーを押す
 2. 新しいVSCodeウィンドウが開く（Extension Development Host）
-3. サイドバーのPrismCodeアイコンをクリック
+3. サイドバーのPrism Codeアイコンをクリック
 4. TypeScriptファイルを開く（`sample/sample.ts`）
 5. サイドバーの「🔍 現在のファイルを可視化」ボタンをクリック
 

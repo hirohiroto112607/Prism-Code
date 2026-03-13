@@ -1,13 +1,27 @@
 import { Node, Edge, MarkerType } from 'reactflow';
 import { IR, IRNode } from '../types/ir';
-import dagre from 'dagre';
+import ELK from 'elkjs/lib/elk.bundled.js';
+
+const elk = new ELK();
+
+const NODE_SIZE: Record<string, { width: number; height: number }> = {
+  if:      { width: 160, height: 160 },
+  loop:    { width: 200, height: 100 },
+  start:   { width: 180, height: 80 },
+  end:     { width: 180, height: 80 },
+  default: { width: 200, height: 80 },
+};
+
+function getNodeSize(type: string | undefined) {
+  return NODE_SIZE[type ?? ''] ?? NODE_SIZE.default;
+}
 
 /**
- * IRをReact Flow形式に変換
+ * IRをReact Flow形式に変換（ELK.jsによるレイアウト）
  */
-export function convertIRToReactFlow(ir: IR): { nodes: Node[]; edges: Edge[] } {
-  const nodes: Node[] = ir.nodes.map((irNode) => convertNodeToReactFlow(irNode));
-  const edges: Edge[] = ir.edges.map((irEdge) => {
+export async function convertIRToReactFlow(ir: IR): Promise<{ nodes: Node[]; edges: Edge[] }> {
+  const rfNodes: Node[] = ir.nodes.map(convertNodeToReactFlow);
+  const rfEdges: Edge[] = ir.edges.map((irEdge) => {
     const edge: Edge = {
       id: irEdge.id,
       source: irEdge.source,
@@ -26,14 +40,12 @@ export function convertIRToReactFlow(ir: IR): { nodes: Node[]; edges: Edge[] } {
       },
     };
 
-    // ifノードからのエッジの場合、適切なハンドルを指定
     if (irEdge.label === 'true') {
       edge.sourceHandle = 'true';
     } else if (irEdge.label === 'false') {
       edge.sourceHandle = 'false';
     }
 
-    // ループノードからのエッジの場合、適切なハンドルを指定
     if (irEdge.label === 'ループ継続') {
       edge.sourceHandle = 'continue';
       edge.style = { stroke: '#10b981', strokeWidth: 2 };
@@ -42,143 +54,87 @@ export function convertIRToReactFlow(ir: IR): { nodes: Node[]; edges: Edge[] } {
       edge.style = { stroke: '#ef4444', strokeWidth: 2 };
     }
 
-    // バックエッジ（ループ本体の最後からループノードへ）
     if (irEdge.label === 'ループ') {
       edge.animated = true;
       edge.style = { stroke: '#14b8a6', strokeWidth: 2 };
-      edge.targetHandle = 'loop'; // バックエッジ専用ハンドル
+      edge.targetHandle = 'loop';
     }
 
-    // ループノードへの初回入力エッジの場合
     const targetNode = ir.nodes.find(n => n.id === irEdge.target);
     if (targetNode && (targetNode.type === 'for' || targetNode.type === 'while') && irEdge.label !== 'ループ') {
-      edge.targetHandle = 'entry'; // 初回入力用ハンドル
+      edge.targetHandle = 'entry';
     }
 
     return edge;
   });
 
-  // レイアウトを計算
-  const layoutedNodes = calculateLayout(nodes, edges);
-
-  return { nodes: layoutedNodes, edges };
+  const layoutedNodes = await calculateLayout(rfNodes, rfEdges);
+  return { nodes: layoutedNodes, edges: rfEdges };
 }
 
 /**
- * IRノードをReact FlowノードにReact Flowノードに変換
+ * IRノードをReact Flowノードに変換
  */
 function convertNodeToReactFlow(irNode: IRNode): Node {
-  const baseNode = {
+  const base = {
     id: irNode.id,
-    position: { x: 0, y: 0 }, // レイアウト計算で上書き
+    position: { x: 0, y: 0 },
     data: {},
   };
 
   switch (irNode.type) {
     case 'start':
-      return {
-        ...baseNode,
-        type: 'start',
-        data: { label: irNode.label },
-      };
-
+      return { ...base, type: 'start', data: { label: irNode.label } };
     case 'end':
-      return {
-        ...baseNode,
-        type: 'end',
-        data: { label: irNode.label },
-      };
-
+      return { ...base, type: 'end', data: { label: irNode.label } };
     case 'if':
-      return {
-        ...baseNode,
-        type: 'if',
-        data: { condition: irNode.condition || 'condition' },
-      };
-
+      return { ...base, type: 'if', data: { condition: irNode.condition || 'condition' } };
     case 'for':
     case 'while':
-      return {
-        ...baseNode,
-        type: 'loop',
-        data: {
-          condition: irNode.condition,
-          loopType: irNode.type,
-        },
-      };
-
+      return { ...base, type: 'loop', data: { condition: irNode.condition, loopType: irNode.type } };
     case 'variable':
     case 'return':
     case 'expression':
-      return {
-        ...baseNode,
-        type: 'process',
-        data: {
-          label: irNode.label,
-          details: irNode.details,
-          nodeType: irNode.type,
-        },
-      };
-
+      return { ...base, type: 'process', data: { label: irNode.label, details: irNode.details, nodeType: irNode.type } };
     default:
-      return baseNode;
+      return base;
   }
 }
 
 /**
- * Dagreを使用してレイアウトを計算
+ * ELK.jsを使用してレイアウトを計算
  */
-function calculateLayout(nodes: Node[], edges: Edge[]): Node[] {
-  const dagreGraph = new dagre.graphlib.Graph();
-  dagreGraph.setDefaultEdgeLabel(() => ({}));
+async function calculateLayout(nodes: Node[], edges: Edge[]): Promise<Node[]> {
+  if (nodes.length === 0) return nodes;
 
-  // ノードタイプに応じたサイズを設定
-  const getNodeSize = (node: Node) => {
-    switch (node.type) {
-      case 'if':
-        return { width: 160, height: 160 };
-      case 'loop':
-        return { width: 200, height: 100 };
-      case 'start':
-      case 'end':
-        return { width: 180, height: 80 };
-      default:
-        return { width: 200, height: 80 };
-    }
+  const elkGraph = {
+    id: 'root',
+    layoutOptions: {
+      'elk.algorithm': 'layered',
+      'elk.direction': 'DOWN',
+      'elk.layered.spacing.nodeNodeBetweenLayers': '100',
+      'elk.spacing.nodeNode': '80',
+      'elk.layered.crossingMinimization.strategy': 'LAYER_SWEEP',
+    },
+    children: nodes.map((node) => {
+      const { width, height } = getNodeSize(node.type);
+      return { id: node.id, width, height };
+    }),
+    edges: edges.map((edge) => ({
+      id: edge.id,
+      sources: [edge.source],
+      targets: [edge.target],
+    })),
   };
 
-  dagreGraph.setGraph({
-    rankdir: 'TB', // Top to Bottom
-    nodesep: 120, // ノード間の水平スペース（増加）
-    ranksep: 150, // ノード間の垂直スペース（増加）
-    edgesep: 50,  // エッジ間のスペース
-    align: 'UL',  // アライメント
-  });
+  const layout = await elk.layout(elkGraph);
 
-  // ノードを追加
-  nodes.forEach((node) => {
-    const size = getNodeSize(node);
-    dagreGraph.setNode(node.id, size);
-  });
+  const posMap = new Map(
+    layout.children?.map((child) => [child.id, { x: child.x ?? 0, y: child.y ?? 0 }]) ?? []
+  );
 
-  // エッジを追加
-  edges.forEach((edge) => {
-    dagreGraph.setEdge(edge.source, edge.target);
-  });
-
-  // レイアウト計算
-  dagre.layout(dagreGraph);
-
-  // 計算結果を適用
-  return nodes.map((node) => {
-    const nodeWithPosition = dagreGraph.node(node.id);
-    const size = getNodeSize(node);
-    return {
-      ...node,
-      position: {
-        x: nodeWithPosition.x - size.width / 2,
-        y: nodeWithPosition.y - size.height / 2,
-      },
-    };
-  });
+  return nodes.map((node) => ({
+    ...node,
+    position: posMap.get(node.id) ?? { x: 0, y: 0 },
+  }));
 }
