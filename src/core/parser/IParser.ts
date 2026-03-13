@@ -1,4 +1,4 @@
-import { AST } from './AST';
+import type { AST } from "./AST";
 
 /**
  * パーサーインターフェース

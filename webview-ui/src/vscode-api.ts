@@ -27,20 +27,20 @@ function getVsCodeApi(): VsCodeApi {
   }
 
   // VSCode 環境の場合は API を取得
-  if (typeof window.acquireVsCodeApi === 'function') {
+  if (typeof window.acquireVsCodeApi === "function") {
     try {
       window.vscodeApi = window.acquireVsCodeApi();
-      console.log('✅ VSCode API acquired successfully');
+      console.log("✅ VSCode API acquired successfully");
       return window.vscodeApi;
     } catch (error) {
-      console.error('❌ Failed to acquire VSCode API:', error);
+      console.error("❌ Failed to acquire VSCode API:", error);
     }
   }
 
   // フォールバック: モック API を作成
-  console.warn('⚠️  Running outside VSCode environment, using mock API');
+  console.warn("⚠️  Running outside VSCode environment, using mock API");
   window.vscodeApi = {
-    postMessage: (message: any) => console.log('📤 Mock postMessage:', message),
+    postMessage: (message: any) => console.log("📤 Mock postMessage:", message),
     getState: () => undefined,
     setState: (_: any) => {},
   };

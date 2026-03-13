@@ -58,9 +58,12 @@ Prism Code/
 │   │   │   ├── IParser.ts        # パーサーインターフェース（疎結合の要）
 │   │   │   └── AST.ts            # AST型定義
 │   │   ├── ir/
-│   │   │   └── IR.ts             # IR型定義（中間表現）
-│   │   └── transformer/
-│   │       └── IRTransformer.ts  # AST → IR 変換ロジック
+│   │   │   └── IR.ts             # IR型定義（中間表現）+ DiagramType
+│   │   ├── transformer/
+│   │   │   └── IRTransformer.ts  # AST → IR 変換ロジック
+│   │   └── visualization/
+│   │       ├── IVisualizationTemplate.ts  # テンプレートインターフェース
+│   │       └── VisualizationSelector.ts   # AI/ルールベース選択ロジック
 │   │
 │   ├── parsers/                  # 言語別パーサー実装
 │   │   ├── typescript/
@@ -914,6 +917,12 @@ console.log('フロー変換エラー:', err);
 
 ### 長期的な目標
 
+- [ ] マルチテンプレート専用レンダラー
+  - [ ] `class-diagram` 用カスタムノード（クラスボックス・継承矢印）
+  - [ ] `screen-transition` 用カスタムノード（画面カード・遷移矢印）
+  - [ ] `sequence-diagram` 用カスタムノード（ライフライン・メッセージ矢印）
+  - [ ] `state-machine` 用カスタムノード（状態円・遷移矢印）
+  - [ ] 各テンプレート用 IRTransformer の実装
 - [ ] 他言語対応
   - [ ] Java
   - [ ] Python

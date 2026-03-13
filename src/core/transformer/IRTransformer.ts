@@ -1,5 +1,5 @@
-import { AST, ASTNode } from '../parser/AST';
-import { IR, IRNode, IREdge, IRMetadata } from '../ir/IR';
+import type { AST, ASTNode } from "../parser/AST";
+import { type IR, type IRNode, type IREdge, IRMetadata } from "../ir/IR";
 
 /**
  * AST → IR 変換クラス
@@ -27,11 +27,12 @@ export class IRTransformer {
     });
 
     return {
-      version: '1.0.0',
+      version: "1.0.0",
       metadata: {
         sourceLanguage: metadata.language,
         sourceFile: metadata.file,
         timestamp: Date.now(),
+        diagramType: "flowchart",
       },
       nodes: this.nodes,
       edges: this.edges,
@@ -44,22 +45,22 @@ export class IRTransformer {
    */
   private transformNode(astNode: ASTNode): string[] {
     switch (astNode.type) {
-      case 'FunctionDeclaration':
+      case "FunctionDeclaration":
         return [this.transformFunction(astNode)];
-      case 'IfStatement':
+      case "IfStatement":
         return this.transformIf(astNode);
-      case 'ForStatement':
+      case "ForStatement":
         return this.transformFor(astNode);
-      case 'WhileStatement':
+      case "WhileStatement":
         return this.transformWhile(astNode);
-      case 'VariableDeclaration':
+      case "VariableDeclaration":
         return [this.transformVariable(astNode)];
-      case 'ReturnStatement':
+      case "ReturnStatement":
         return [this.transformReturn(astNode)];
-      case 'ExpressionStatement':
+      case "ExpressionStatement":
         return [this.transformExpression(astNode)];
       default:
-        console.warn('未対応のノード型:', astNode);
+        console.warn("未対応のノード型:", astNode);
         return [this.generateNodeId()];
     }
   }
@@ -73,7 +74,7 @@ export class IRTransformer {
     // 開始ノード
     this.nodes.push({
       id: startId,
-      type: 'start',
+      type: "start",
       label: `関数開始: ${fn.name}`,
     });
 
@@ -88,8 +89,11 @@ export class IRTransformer {
       // 前の出口から現在の入口に接続
       for (const exitId of currentExits) {
         // 前のノードがループノードの場合、「ループ終了」ラベルを付ける
-        const exitNode = this.nodes.find(n => n.id === exitId);
-        const label = (exitNode?.type === 'for' || exitNode?.type === 'while') ? 'ループ終了' : undefined;
+        const exitNode = this.nodes.find((n) => n.id === exitId);
+        const label =
+          exitNode?.type === "for" || exitNode?.type === "while"
+            ? "ループ終了"
+            : undefined;
         this.addEdge(exitId, entryId, label);
       }
 
@@ -103,15 +107,18 @@ export class IRTransformer {
     // 終了ノード
     this.nodes.push({
       id: endId,
-      type: 'end',
+      type: "end",
       label: `関数終了: ${fn.name}`,
     });
 
     // 最後の出口から終了ノードへ接続
     for (const exitId of currentExits) {
       // 最後のノードがループノードの場合、「ループ終了」ラベルを付ける
-      const exitNode = this.nodes.find(n => n.id === exitId);
-      const label = (exitNode?.type === 'for' || exitNode?.type === 'while') ? 'ループ終了' : undefined;
+      const exitNode = this.nodes.find((n) => n.id === exitId);
+      const label =
+        exitNode?.type === "for" || exitNode?.type === "while"
+          ? "ループ終了"
+          : undefined;
       this.addEdge(exitId, endId, label);
     }
 
@@ -128,11 +135,11 @@ export class IRTransformer {
     // 制御フローノードを追加
     this.nodes.push({
       id: nodeId,
-      type: 'if',
+      type: "if",
       condition: ifNode.condition,
       branches: {
-        then: [],
-        else: [],
+        trueBranch: [],
+        falseBranch: [],
       },
       location: ifNode.location,
     });
@@ -150,7 +157,7 @@ export class IRTransformer {
 
         // 前の出口から現在の入口に接続
         for (const exitId of currentExits) {
-          this.addEdge(exitId, entryId, isFirst ? 'true' : undefined);
+          this.addEdge(exitId, entryId, isFirst ? "true" : undefined);
         }
 
         currentExits = exitIds;
@@ -172,7 +179,7 @@ export class IRTransformer {
 
         // 前の出口から現在の入口に接続
         for (const exitId of currentExits) {
-          this.addEdge(exitId, entryId, isFirst ? 'false' : undefined);
+          this.addEdge(exitId, entryId, isFirst ? "false" : undefined);
         }
 
         currentExits = exitIds;
@@ -201,7 +208,7 @@ export class IRTransformer {
     // 制御フローノードを追加
     this.nodes.push({
       id: nodeId,
-      type: 'for',
+      type: "for",
       condition: forNode.condition,
       branches: {
         body: [],
@@ -218,7 +225,11 @@ export class IRTransformer {
 
         // 前の出口から現在の入口に接続
         for (const exitId of currentExits) {
-          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'ループ継続' : undefined);
+          this.addEdge(
+            exitId,
+            entryId,
+            currentExits[0] === nodeId ? "ループ継続" : undefined,
+          );
         }
 
         currentExits = stmtExits;
@@ -226,7 +237,7 @@ export class IRTransformer {
 
       // ループ本体の最後からループ開始へのバックエッジ
       for (const exitId of currentExits) {
-        this.addEdge(exitId, nodeId, 'ループ');
+        this.addEdge(exitId, nodeId, "ループ");
       }
     }
 
@@ -244,7 +255,7 @@ export class IRTransformer {
     // 制御フローノードを追加
     this.nodes.push({
       id: nodeId,
-      type: 'while',
+      type: "while",
       condition: whileNode.condition,
       branches: {
         body: [],
@@ -261,7 +272,11 @@ export class IRTransformer {
 
         // 前の出口から現在の入口に接続
         for (const exitId of currentExits) {
-          this.addEdge(exitId, entryId, currentExits[0] === nodeId ? 'ループ継続' : undefined);
+          this.addEdge(
+            exitId,
+            entryId,
+            currentExits[0] === nodeId ? "ループ継続" : undefined,
+          );
         }
 
         currentExits = stmtExits;
@@ -269,7 +284,7 @@ export class IRTransformer {
 
       // ループ本体の最後からループ開始へのバックエッジ
       for (const exitId of currentExits) {
-        this.addEdge(exitId, nodeId, 'ループ');
+        this.addEdge(exitId, nodeId, "ループ");
       }
     }
 
@@ -289,7 +304,7 @@ export class IRTransformer {
 
     this.nodes.push({
       id: nodeId,
-      type: 'variable',
+      type: "variable",
       label,
       details: varNode.varType,
       location: varNode.location,
@@ -304,11 +319,11 @@ export class IRTransformer {
   private transformReturn(returnNode: any): string {
     const nodeId = this.generateNodeId();
 
-    const label = returnNode.value ? `return ${returnNode.value}` : 'return';
+    const label = returnNode.value ? `return ${returnNode.value}` : "return";
 
     this.nodes.push({
       id: nodeId,
-      type: 'return',
+      type: "return",
       label,
       location: returnNode.location,
     });
@@ -324,7 +339,7 @@ export class IRTransformer {
 
     this.nodes.push({
       id: nodeId,
-      type: 'expression',
+      type: "expression",
       label: exprNode.expression,
       location: exprNode.location,
     });
@@ -341,7 +356,7 @@ export class IRTransformer {
       source,
       target,
       label,
-      type: 'control',
+      type: "control",
     });
   }
 

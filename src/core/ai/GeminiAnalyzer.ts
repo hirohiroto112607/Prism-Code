@@ -1,16 +1,15 @@
-import { GoogleGenAI } from '@google/genai';
-import { IR } from '../ir/IR';
-import path from 'path';
+import type { IR } from "../ir/IR";
+import path from "path";
 
 /**
  * Gemini APIを使用してソースコードを解析し、IRを生成するクラス
  */
 export class GeminiAnalyzer {
-  private genAI: GoogleGenAI;
+  private apiKey: string;
   private modelName: string;
 
-  constructor(apiKey: string, modelName = 'gemini-2.0-flash-lite') {
-    this.genAI = new GoogleGenAI({ apiKey });
+  constructor(apiKey: string, modelName = "gemini-2.0-flash-lite") {
+    this.apiKey = apiKey;
     this.modelName = modelName;
   }
 
@@ -20,20 +19,31 @@ export class GeminiAnalyzer {
   async analyzeCode(code: string, filePath: string): Promise<IR> {
     const prompt = this.buildPrompt(code, filePath);
 
-    let response;
+    let responseText = "";
     try {
-      response = await this.genAI.models.generateContent({
-        model: this.modelName,
-        contents: prompt,
-        config: {
-          responseMimeType: 'application/json',
-        },
+      const url = `https://generativelanguage.googleapis.com/v1/models/${encodeURIComponent(
+        this.modelName,
+      )}:generate?key=${encodeURIComponent(this.apiKey)}`;
+
+      const res = await (globalThis as any).fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: { text: prompt } }),
       });
+
+      if (!res.ok) {
+        const detail = await res.text();
+        const errObj: any = { status: res.status, errorDetails: detail };
+        throw GeminiAnalyzer.wrapApiError(errObj, this.modelName);
+      }
+
+      const json = await res.json();
+      responseText = GeminiAnalyzer.extractTextFromGenerateResponse(json);
     } catch (err: any) {
+      if (err instanceof Error) throw err;
       throw GeminiAnalyzer.wrapApiError(err, this.modelName);
     }
 
-    const responseText = response.text ?? '';
     return this.parseResponse(responseText, filePath);
   }
 
@@ -42,26 +52,70 @@ export class GeminiAnalyzer {
    */
   static wrapApiError(err: any, modelName: string): Error {
     const body = err?.errorDetails ?? err?.message ?? String(err);
-    const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
+    const bodyStr = typeof body === "string" ? body : JSON.stringify(body);
 
     // 429 クォータ超過
-    if (err?.status === 429 || bodyStr.includes('RESOURCE_EXHAUSTED') || bodyStr.includes('429')) {
+    if (
+      err?.status === 429 ||
+      bodyStr.includes("RESOURCE_EXHAUSTED") ||
+      bodyStr.includes("429")
+    ) {
       const retryMatch = bodyStr.match(/retryDelay["\s:]+(\d+)/);
-      const retrySec = retryMatch ? `約${retryMatch[1]}秒後に再試行できます。` : '';
+      const retrySec = retryMatch
+        ? `約${retryMatch[1]}秒後に再試行できます。`
+        : "";
       return new GeminiQuotaError(
         `Gemini APIの無料枠クォータを超過しました（モデル: ${modelName}）。` +
-        `${retrySec} ` +
-        `"gemini-2.0-flash-lite" への切り替えか、有料プランへのアップグレードを検討してください。`,
-        modelName
+          `${retrySec} ` +
+          `"gemini-2.0-flash-lite" への切り替えか、有料プランへのアップグレードを検討してください。`,
+        modelName,
       );
     }
 
     // 401 / 403 認証エラー
-    if (err?.status === 401 || err?.status === 403 || bodyStr.includes('API_KEY_INVALID')) {
-      return new Error('Gemini APIキーが無効です。設定を確認してください。');
+    if (
+      err?.status === 401 ||
+      err?.status === 403 ||
+      bodyStr.includes("API_KEY_INVALID")
+    ) {
+      return new Error("Gemini APIキーが無効です。設定を確認してください。");
     }
 
     return err instanceof Error ? err : new Error(bodyStr);
+  }
+
+  /**
+   * 新APIのレスポンスからテキスト出力を抽出する（多様なレスポンス形式に対応）
+   */
+  private static extractTextFromGenerateResponse(json: any): string {
+    if (!json) return "";
+
+    // v1: generativelanguage -> outputs[].content[].text
+    if (Array.isArray(json.outputs) && json.outputs[0]) {
+      const out = json.outputs[0];
+      if (Array.isArray(out.content)) {
+        return out.content.map((c: any) => c?.text ?? "").join("");
+      }
+    }
+
+    // candidates形式
+    if (Array.isArray(json.candidates) && json.candidates[0]) {
+      const cand = json.candidates[0];
+      if (typeof cand.output === "string") return cand.output;
+      if (Array.isArray(cand.content))
+        return cand.content.map((c: any) => c?.text ?? "").join("");
+    }
+
+    // 単純フィールド
+    if (typeof json.outputText === "string") return json.outputText;
+    if (typeof json.text === "string") return json.text;
+
+    // フォールバック: JSONを文字列化して返す
+    try {
+      return JSON.stringify(json);
+    } catch (e) {
+      return "";
+    }
   }
 
   /**
@@ -185,17 +239,20 @@ ${code}
     try {
       parsed = JSON.parse(jsonText);
     } catch (parseError) {
-      console.error('GeminiレスポンスのJSON解析失敗:', parseError);
-      console.error('レスポンス（先頭500文字）:', responseText.substring(0, 500));
+      console.error("GeminiレスポンスのJSON解析失敗:", parseError);
+      console.error(
+        "レスポンス（先頭500文字）:",
+        responseText.substring(0, 500),
+      );
       throw new Error(
-        `GeminiのレスポンスをJSONとして解析できませんでした。APIキーが正しいか確認してください。`
+        `GeminiのレスポンスをJSONとして解析できませんでした。APIキーが正しいか確認してください。`,
       );
     }
 
     if (!this.validateIR(parsed)) {
-      console.error('IR検証失敗:', JSON.stringify(parsed).substring(0, 500));
+      console.error("IR検証失敗:", JSON.stringify(parsed).substring(0, 500));
       throw new Error(
-        'GeminiのレスポンスがIR形式に準拠していません。コードが複雑すぎる可能性があります。'
+        "GeminiのレスポンスがIR形式に準拠していません。コードが複雑すぎる可能性があります。",
       );
     }
 
@@ -210,26 +267,26 @@ ${code}
    * IRの最小限のバリデーション
    */
   private validateIR(obj: any): obj is IR {
-    if (!obj || typeof obj !== 'object') {
+    if (!obj || typeof obj !== "object") {
       return false;
     }
-    if (typeof obj.version !== 'string') {
+    if (typeof obj.version !== "string") {
       return false;
     }
-    if (!obj.metadata || typeof obj.metadata !== 'object') {
+    if (!obj.metadata || typeof obj.metadata !== "object") {
       return false;
     }
     if (!Array.isArray(obj.nodes) || !Array.isArray(obj.edges)) {
       return false;
     }
     const nodesValid = obj.nodes.every(
-      (n: any) => typeof n.id === 'string' && typeof n.type === 'string'
+      (n: any) => typeof n.id === "string" && typeof n.type === "string",
     );
     const edgesValid = obj.edges.every(
       (e: any) =>
-        typeof e.id === 'string' &&
-        typeof e.source === 'string' &&
-        typeof e.target === 'string'
+        typeof e.id === "string" &&
+        typeof e.source === "string" &&
+        typeof e.target === "string",
     );
     return nodesValid && edgesValid;
   }
@@ -237,8 +294,11 @@ ${code}
 
 /** クォータ超過エラー（モデル名を保持して extension 側で切り替えアクションを出せるようにする） */
 export class GeminiQuotaError extends Error {
-  constructor(message: string, public readonly modelName: string) {
+  constructor(
+    message: string,
+    public readonly modelName: string,
+  ) {
     super(message);
-    this.name = 'GeminiQuotaError';
+    this.name = "GeminiQuotaError";
   }
 }

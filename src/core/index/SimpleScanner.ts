@@ -3,8 +3,8 @@
  * vscode.workspace.findFiles を使わずに、Node.jsのfsモジュールで直接ファイルを検索
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
+import * as fs from "fs/promises";
+import * as path from "path";
 
 export class SimpleScanner {
   /**
@@ -12,16 +12,16 @@ export class SimpleScanner {
    */
   async scanDirectory(
     dirPath: string,
-    excludePatterns: string[] = []
+    excludePatterns: string[] = [],
   ): Promise<string[]> {
-    console.log('=== SimpleScanner.scanDirectory 開始 ===');
-    console.log('ディレクトリパス:', dirPath);
-    console.log('除外パターン:', excludePatterns);
+    console.log("=== SimpleScanner.scanDirectory 開始 ===");
+    console.log("ディレクトリパス:", dirPath);
+    console.log("除外パターン:", excludePatterns);
 
     const results: string[] = [];
 
     const scan = async (currentPath: string): Promise<void> => {
-      console.log('スキャン中:', currentPath);
+      console.log("スキャン中:", currentPath);
       try {
         const entries = await fs.readdir(currentPath, { withFileTypes: true });
 
@@ -30,8 +30,15 @@ export class SimpleScanner {
           const relativePath = path.relative(dirPath, fullPath);
 
           // 除外パターンをチェック（ディレクトリとファイル両方）
-          if (this.shouldExclude(relativePath, entry.name, excludePatterns, entry.isDirectory())) {
-            console.log('除外:', relativePath);
+          if (
+            this.shouldExclude(
+              relativePath,
+              entry.name,
+              excludePatterns,
+              entry.isDirectory(),
+            )
+          ) {
+            console.log("除外:", relativePath);
             continue;
           }
 
@@ -43,15 +50,15 @@ export class SimpleScanner {
             const ext = path.extname(entry.name);
 
             // .d.tsファイルを除外
-            if (entry.name.endsWith('.d.ts')) {
-              console.log('除外（型定義ファイル）:', relativePath);
+            if (entry.name.endsWith(".d.ts")) {
+              console.log("除外（型定義ファイル）:", relativePath);
               continue;
             }
 
             // 対象のファイル拡張子のみを含める
-            if (['.ts', '.tsx', '.js', '.jsx'].includes(ext)) {
+            if ([".ts", ".tsx", ".js", ".jsx"].includes(ext)) {
               results.push(fullPath);
-              console.log('発見:', relativePath);
+              console.log("発見:", relativePath);
             }
           }
         }
@@ -62,9 +69,9 @@ export class SimpleScanner {
 
     await scan(dirPath);
 
-    console.log('=== SimpleScanner.scanDirectory 終了 ===');
-    console.log('発見したファイル数:', results.length);
-    console.log('ファイルリスト:', results);
+    console.log("=== SimpleScanner.scanDirectory 終了 ===");
+    console.log("発見したファイル数:", results.length);
+    console.log("ファイルリスト:", results);
 
     return results;
   }
@@ -76,49 +83,56 @@ export class SimpleScanner {
     relativePath: string,
     name: string,
     excludePatterns: string[],
-    isDirectory: boolean
+    isDirectory: boolean,
   ): boolean {
     // .prismcodeフォルダー自体は除外（無限ループ防止）
-    if (name === '.prismcode') {
-      console.log('除外（.prismcode）:', name);
+    if (name === ".prismcode") {
+      console.log("除外（.prismcode）:", name);
       return true;
     }
 
     // 一般的な隠しファイル/ディレクトリを除外（ただし.prismcodeは既にチェック済み）
-    if (name.startsWith('.') && name !== '.prismcode') {
-      console.log('除外（隠しファイル）:', name);
+    if (name.startsWith(".") && name !== ".prismcode") {
+      console.log("除外（隠しファイル）:", name);
       return true;
     }
 
-    console.log('除外チェック - name:', name, 'isDirectory:', isDirectory, 'relativePath:', relativePath);
+    console.log(
+      "除外チェック - name:",
+      name,
+      "isDirectory:",
+      isDirectory,
+      "relativePath:",
+      relativePath,
+    );
 
     // 明示的に除外すべきディレクトリ（デフォルト）
     const defaultExcludes = [
-      'node_modules',
-      '.git',
-      'dist',
-      'build',
-      'out',
-      '.vite',
-      '.vscode-test',
-      'coverage',
-      '.next',
-      '.nuxt',
-      '.turbo',
-      '__pycache__',
-      'vendor',
+      "node_modules",
+      ".git",
+      "dist",
+      "build",
+      "out",
+      ".vite",
+      ".vscode-test",
+      "coverage",
+      ".next",
+      ".nuxt",
+      ".turbo",
+      "__pycache__",
+      "vendor",
     ];
 
     // 除外すべきファイルパターン（ファイルのみ）
     const excludeFilePatterns = [
-      '.min.js',
-      '.bundle.js',
-      '.map',
-      '.d.ts',
-      'package-lock.json',
-      'yarn.lock',
-      'pnpm-lock.yaml',
-      '.DS_Store',
+      ".min.js",
+      ".bundle.js",
+      ".map",
+      ".d.ts",
+      "package-lock.json",
+      "yarn.lock",
+      "pnpm-lock.yaml",
+      ".DS_Store",
     ];
 
     // ファイル名が除外パターンに一致するかチェック（ファイルのみ）
@@ -159,10 +173,14 @@ export class SimpleScanner {
   /**
    * パターンマッチング
    */
-  private matchPattern(relativePath: string, name: string, pattern: string): boolean {
+  private matchPattern(
+    relativePath: string,
+    name: string,
+    pattern: string,
+  ): boolean {
     // **/ を含むパターン（例: node_modules/**）
-    if (pattern.includes('**/')) {
-      const cleanPattern = pattern.replace(/\*\*\//g, '').replace(/\*/g, '');
+    if (pattern.includes("**/")) {
+      const cleanPattern = pattern.replace(/\*\*\//g, "").replace(/\*/g, "");
       return (
         relativePath.includes(cleanPattern) ||
         name.includes(cleanPattern) ||
@@ -171,15 +189,15 @@ export class SimpleScanner {
     }
 
     // **を含むパターン（例: **/*.min.js）
-    if (pattern.includes('**')) {
-      const cleanPattern = pattern.replace(/\*\*/g, '').replace(/\*/g, '');
+    if (pattern.includes("**")) {
+      const cleanPattern = pattern.replace(/\*\*/g, "").replace(/\*/g, "");
       return relativePath.includes(cleanPattern) || name.includes(cleanPattern);
     }
 
     // 単純なワイルドカード（例: *.min.js）
-    if (pattern.includes('*')) {
+    if (pattern.includes("*")) {
       const regex = new RegExp(
-        '^' + pattern.replace(/\*/g, '.*').replace(/\?/g, '.') + '$'
+        "^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$",
       );
       return regex.test(name) || regex.test(relativePath);
     }

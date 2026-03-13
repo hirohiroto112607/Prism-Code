@@ -1,18 +1,18 @@
-import * as vscode from 'vscode';
-import { IR } from '../core/ir/IR';
-import { ProjectMacroViewData } from '../core/index/types';
+import * as vscode from "vscode";
+import type { IR } from "../core/ir/IR";
+import type { ProjectMacroViewData } from "../core/index/types";
 
 /**
  * エディタエリアにフローチャートを表示するWebviewPanel
  */
 export class FlowChartPanel {
   public static currentPanel: FlowChartPanel | undefined;
-  private static readonly viewType = 'prismcode.flowchart';
+  private static readonly viewType = "prismcode.flowchart";
 
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
-  private _currentViewMode: 'micro' | 'macro' = 'micro';
+  private _currentViewMode: "micro" | "macro" = "micro";
 
   /**
    * FlowChartPanelを作成または既存のものを表示
@@ -31,13 +31,13 @@ export class FlowChartPanel {
     // 新しいパネルを作成
     const panel = vscode.window.createWebviewPanel(
       FlowChartPanel.viewType,
-      'フローチャート',
+      "フローチャート",
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
         localResourceRoots: [extensionUri],
         retainContextWhenHidden: true, // パネルが隠れても状態を保持
-      }
+      },
     );
 
     FlowChartPanel.currentPanel = new FlowChartPanel(panel, extensionUri);
@@ -58,13 +58,13 @@ export class FlowChartPanel {
     this._panel.webview.onDidReceiveMessage(
       (message) => {
         switch (message.type) {
-          case 'alert':
+          case "alert":
             vscode.window.showInformationMessage(message.text);
             break;
         }
       },
       null,
-      this._disposables
+      this._disposables,
     );
   }
 
@@ -72,31 +72,34 @@ export class FlowChartPanel {
    * IRデータをWebViewに送信してフローチャートを更新（ミクロビュー）
    */
   public updateFlowChart(ir: IR): void {
-    console.log('FlowChartPanel.updateFlowChart called with IR:', {
+    console.log("FlowChartPanel.updateFlowChart called with IR:", {
       nodes: ir.nodes.length,
-      edges: ir.edges.length
+      edges: ir.edges.length,
     });
-    this._currentViewMode = 'micro';
+    this._currentViewMode = "micro";
     this._panel.webview.postMessage({
-      type: 'updateFlow',
+      type: "updateFlow",
       data: ir,
-      viewMode: 'micro',
+      viewMode: "micro",
     });
-    console.log('Message sent to webview');
+    console.log("Message sent to webview");
   }
 
   /**
    * プロジェクト全体のマクロビューデータをWebViewに送信
    */
   public updateProjectMacroView(projectMacroData: ProjectMacroViewData): void {
-    console.log('FlowChartPanel.updateProjectMacroView called with data:', projectMacroData);
-    this._currentViewMode = 'macro';
+    console.log(
+      "FlowChartPanel.updateProjectMacroView called with data:",
+      projectMacroData,
+    );
+    this._currentViewMode = "macro";
     this._panel.webview.postMessage({
-      type: 'updateMacroView',
+      type: "updateMacroView",
       data: projectMacroData,
-      viewMode: 'macro',
+      viewMode: "macro",
     });
-    console.log('Project macro view message sent to webview');
+    console.log("Project macro view message sent to webview");
   }
 
   /**
@@ -121,10 +124,22 @@ export class FlowChartPanel {
   private _getHtmlForWebview(webview: vscode.Webview): string {
     // WebView UIのビルド済みファイルへのパス
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.js')
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "webview-ui",
+        "build",
+        "assets",
+        "index.js",
+      ),
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.css')
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "webview-ui",
+        "build",
+        "assets",
+        "index.css",
+      ),
     );
 
     const nonce = getNonce();
@@ -148,8 +163,9 @@ export class FlowChartPanel {
 }
 
 function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = "";
+  const possible =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   for (let i = 0; i < 32; i++) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }

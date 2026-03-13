@@ -3,54 +3,54 @@ interface OverviewViewProps {
 }
 
 export function OverviewView({ data }: OverviewViewProps) {
-
   return (
     <div
       style={{
-        width: '100vw',
-        height: '100vh',
-        background: '#1e1e1e',
-        color: '#e0e0e0',
-        padding: '20px',
-        overflow: 'auto',
+        width: "100vw",
+        height: "100vh",
+        background: "#1e1e1e",
+        color: "#e0e0e0",
+        padding: "20px",
+        overflow: "auto",
       }}
     >
       {/* ヘッダー */}
       <div
         style={{
-          marginBottom: '30px',
-          borderBottom: '2px solid #667eea',
-          paddingBottom: '15px',
+          marginBottom: "30px",
+          borderBottom: "2px solid #667eea",
+          paddingBottom: "15px",
         }}
       >
         <h1
           style={{
             margin: 0,
-            fontSize: '28px',
-            fontWeight: 'bold',
-            color: '#667eea',
+            fontSize: "28px",
+            fontWeight: "bold",
+            color: "#667eea",
           }}
         >
           📊 概要ビュー
         </h1>
         <p
           style={{
-            margin: '5px 0 0 0',
-            fontSize: '14px',
-            color: '#9ca3af',
+            margin: "5px 0 0 0",
+            fontSize: "14px",
+            color: "#9ca3af",
           }}
         >
-          {data?.metadata?.sourceFile?.split('/').pop() || 'ワークスペース'} - システム全体の構造を表示
+          {data?.metadata?.sourceFile?.split("/").pop() || "ワークスペース"} -
+          システム全体の構造を表示
         </p>
       </div>
 
       {/* 統計情報 */}
       <div
         style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-          gap: '15px',
-          marginBottom: '30px',
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "15px",
+          marginBottom: "30px",
         }}
       >
         <StatCard
@@ -68,8 +68,10 @@ export function OverviewView({ data }: OverviewViewProps) {
         <StatCard
           title="平均行数"
           value={Math.round(
-            data.functions.reduce((sum: number, f: any) => sum + f.lineCount, 0) /
-              data.functions.length || 0
+            data.functions.reduce(
+              (sum: number, f: any) => sum + f.lineCount,
+              0,
+            ) / data.functions.length || 0,
           )}
           icon="📝"
           color="#f59e0b"
@@ -77,8 +79,10 @@ export function OverviewView({ data }: OverviewViewProps) {
         <StatCard
           title="平均複雑度"
           value={Math.round(
-            data.functions.reduce((sum: number, f: any) => sum + f.complexity, 0) /
-              data.functions.length || 0
+            data.functions.reduce(
+              (sum: number, f: any) => sum + f.complexity,
+              0,
+            ) / data.functions.length || 0,
           )}
           icon="⚙️"
           color="#ef4444"
@@ -86,25 +90,28 @@ export function OverviewView({ data }: OverviewViewProps) {
       </div>
 
       {/* 関数一覧 */}
-      <div style={{ marginBottom: '30px' }}>
+      <div style={{ marginBottom: "30px" }}>
         <h2
           style={{
-            fontSize: '20px',
-            fontWeight: 'bold',
-            marginBottom: '15px',
-            color: '#60a5fa',
+            fontSize: "20px",
+            fontWeight: "bold",
+            marginBottom: "15px",
+            color: "#60a5fa",
           }}
         >
           関数一覧
         </h2>
         <div
           style={{
-            display: 'grid',
-            gap: '15px',
+            display: "grid",
+            gap: "15px",
           }}
         >
           {data.functions.map((func: any) => (
-            <FunctionCard key={func.id} func={func} />
+            <FunctionCard
+              key={func.id}
+              func={func}
+            />
           ))}
         </div>
       </div>
@@ -114,44 +121,44 @@ export function OverviewView({ data }: OverviewViewProps) {
         <div>
           <h2
             style={{
-              fontSize: '20px',
-              fontWeight: 'bold',
-              marginBottom: '15px',
-              color: '#60a5fa',
+              fontSize: "20px",
+              fontWeight: "bold",
+              marginBottom: "15px",
+              color: "#60a5fa",
             }}
           >
             関数呼び出し関係
           </h2>
           <div
             style={{
-              background: '#2d2d2d',
-              borderRadius: '8px',
-              padding: '20px',
-              border: '1px solid #404040',
+              background: "#2d2d2d",
+              borderRadius: "8px",
+              padding: "20px",
+              border: "1px solid #404040",
             }}
           >
             {data.callGraph.map((call: any) => (
               <div
                 key={call.id}
                 style={{
-                  padding: '10px',
-                  marginBottom: '10px',
-                  background: '#1e1e1e',
-                  borderRadius: '6px',
-                  borderLeft: '3px solid #667eea',
-                  fontSize: '14px',
+                  padding: "10px",
+                  marginBottom: "10px",
+                  background: "#1e1e1e",
+                  borderRadius: "6px",
+                  borderLeft: "3px solid #667eea",
+                  fontSize: "14px",
                 }}
               >
-                <span style={{ color: '#60a5fa', fontWeight: 'bold' }}>
+                <span style={{ color: "#60a5fa", fontWeight: "bold" }}>
                   {call.caller}
                 </span>
-                <span style={{ color: '#9ca3af', margin: '0 10px' }}>→</span>
-                <span style={{ color: '#a78bfa' }}>{call.callee}()</span>
+                <span style={{ color: "#9ca3af", margin: "0 10px" }}>→</span>
+                <span style={{ color: "#a78bfa" }}>{call.callee}()</span>
                 <span
                   style={{
-                    color: '#6b7280',
-                    fontSize: '12px',
-                    marginLeft: '10px',
+                    color: "#6b7280",
+                    fontSize: "12px",
+                    marginLeft: "10px",
                   }}
                 >
                   (line {call.location.start.line})
@@ -165,15 +172,16 @@ export function OverviewView({ data }: OverviewViewProps) {
       {/* フッター */}
       <div
         style={{
-          marginTop: '40px',
-          padding: '20px',
-          textAlign: 'center',
-          color: '#6b7280',
-          fontSize: '12px',
-          borderTop: '1px solid #404040',
+          marginTop: "40px",
+          padding: "20px",
+          textAlign: "center",
+          color: "#6b7280",
+          fontSize: "12px",
+          borderTop: "1px solid #404040",
         }}
       >
-        💡 ヒント: ミクロビューでは詳細なフローチャート、マクロビューでは機能単位の俯瞰図を表示できます
+        💡 ヒント:
+        ミクロビューでは詳細なフローチャート、マクロビューでは機能単位の俯瞰図を表示できます
       </div>
     </div>
   );
@@ -194,25 +202,25 @@ function StatCard({
   return (
     <div
       style={{
-        background: '#2d2d2d',
-        padding: '20px',
-        borderRadius: '8px',
-        border: '1px solid #404040',
-        textAlign: 'center',
+        background: "#2d2d2d",
+        padding: "20px",
+        borderRadius: "8px",
+        border: "1px solid #404040",
+        textAlign: "center",
       }}
     >
-      <div style={{ fontSize: '32px', marginBottom: '10px' }}>{icon}</div>
+      <div style={{ fontSize: "32px", marginBottom: "10px" }}>{icon}</div>
       <div
         style={{
-          fontSize: '28px',
-          fontWeight: 'bold',
+          fontSize: "28px",
+          fontWeight: "bold",
           color,
-          marginBottom: '5px',
+          marginBottom: "5px",
         }}
       >
         {value}
       </div>
-      <div style={{ fontSize: '14px', color: '#9ca3af' }}>{title}</div>
+      <div style={{ fontSize: "14px", color: "#9ca3af" }}>{title}</div>
     </div>
   );
 }
@@ -222,58 +230,75 @@ function FunctionCard({ func }: { func: any }) {
   return (
     <div
       style={{
-        background: '#2d2d2d',
-        padding: '20px',
-        borderRadius: '8px',
-        border: '1px solid #404040',
+        background: "#2d2d2d",
+        padding: "20px",
+        borderRadius: "8px",
+        border: "1px solid #404040",
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: "12px",
+        }}
+      >
         <div>
           <h3
             style={{
               margin: 0,
-              fontSize: '18px',
-              fontWeight: 'bold',
-              color: '#60a5fa',
+              fontSize: "18px",
+              fontWeight: "bold",
+              color: "#60a5fa",
             }}
           >
             {func.name}
           </h3>
           <div
             style={{
-              fontSize: '13px',
-              color: '#9ca3af',
-              marginTop: '5px',
+              fontSize: "13px",
+              color: "#9ca3af",
+              marginTop: "5px",
             }}
           >
-            ({func.parameters.join(', ')})
+            ({func.parameters.join(", ")})
             {func.returnType && (
-              <span style={{ color: '#a78bfa' }}> → {func.returnType}</span>
+              <span style={{ color: "#a78bfa" }}> → {func.returnType}</span>
             )}
           </div>
         </div>
         <div
           style={{
-            fontSize: '12px',
-            color: '#6b7280',
+            fontSize: "12px",
+            color: "#6b7280",
           }}
         >
           行 {func.location.start.line}-{func.location.end.line}
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+      <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
         <Badge
           label={`${func.lineCount}行`}
           color="#f59e0b"
         />
         <Badge
           label={`複雑度: ${func.complexity}`}
-          color={func.complexity > 5 ? '#ef4444' : '#10b981'}
+          color={func.complexity > 5 ? "#ef4444" : "#10b981"}
         />
-        {func.hasLoops && <Badge label="ループあり" color="#667eea" />}
-        {func.hasConditionals && <Badge label="条件分岐あり" color="#764ba2" />}
+        {func.hasLoops && (
+          <Badge
+            label="ループあり"
+            color="#667eea"
+          />
+        )}
+        {func.hasConditionals && (
+          <Badge
+            label="条件分岐あり"
+            color="#764ba2"
+          />
+        )}
       </div>
     </div>
   );
@@ -284,11 +309,11 @@ function Badge({ label, color }: { label: string; color: string }) {
   return (
     <span
       style={{
-        display: 'inline-block',
-        padding: '4px 10px',
-        borderRadius: '12px',
-        fontSize: '12px',
-        fontWeight: 'bold',
+        display: "inline-block",
+        padding: "4px 10px",
+        borderRadius: "12px",
+        fontSize: "12px",
+        fontWeight: "bold",
         background: `${color}20`,
         color,
         border: `1px solid ${color}40`,

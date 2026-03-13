@@ -1,6 +1,6 @@
-import { Project, SourceFile, SyntaxKind, Node } from 'ts-morph';
-import { IParser } from '../../core/parser/IParser';
-import {
+import { Project, type SourceFile, SyntaxKind, Node } from "ts-morph";
+import type { IParser } from "../../core/parser/IParser";
+import type {
   AST,
   ASTNode,
   FunctionNode,
@@ -11,8 +11,8 @@ import {
   ReturnStatementNode,
   ExpressionStatementNode,
   SourceLocation,
-  Parameter
-} from '../../core/parser/AST';
+  Parameter,
+} from "../../core/parser/AST";
 
 /**
  * TypeScriptパーサー
@@ -32,24 +32,24 @@ export class TypeScriptParser implements IParser {
 
   parse(code: string, filePath?: string): AST {
     const sourceFile = this.project.createSourceFile(
-      filePath || 'temp.ts',
+      filePath || "temp.ts",
       code,
-      { overwrite: true }
+      { overwrite: true },
     );
 
     return {
-      type: 'Program',
+      type: "Program",
       body: this.parseSourceFile(sourceFile),
       sourceFile: filePath,
     };
   }
 
   getSupportedLanguage(): string {
-    return 'TypeScript';
+    return "TypeScript";
   }
 
   getSupportedExtensions(): string[] {
-    return ['.ts', '.tsx', '.js', '.jsx'];
+    return [".ts", ".tsx", ".js", ".jsx"];
   }
 
   /**
@@ -72,7 +72,7 @@ export class TypeScriptParser implements IParser {
       if (initializer && Node.isArrowFunction(initializer)) {
         const functionNode = this.parseArrowFunction(
           varDecl.getName(),
-          initializer
+          initializer,
         );
         if (functionNode) {
           nodes.push(functionNode);
@@ -88,7 +88,7 @@ export class TypeScriptParser implements IParser {
    */
   private parseFunctionDeclaration(fn: any): FunctionNode | null {
     try {
-      const name = fn.getName() || 'anonymous';
+      const name = fn.getName() || "anonymous";
       const parameters: Parameter[] = fn.getParameters().map((param: any) => ({
         name: param.getName(),
         type: param.getTypeNode()?.getText(),
@@ -98,7 +98,7 @@ export class TypeScriptParser implements IParser {
       const location = this.getLocation(fn);
 
       return {
-        type: 'FunctionDeclaration',
+        type: "FunctionDeclaration",
         name,
         parameters,
         body,
@@ -106,7 +106,7 @@ export class TypeScriptParser implements IParser {
         location,
       };
     } catch (error) {
-      console.error('関数解析エラー:', error);
+      console.error("関数解析エラー:", error);
       return null;
     }
   }
@@ -116,10 +116,12 @@ export class TypeScriptParser implements IParser {
    */
   private parseArrowFunction(name: string, arrow: any): FunctionNode | null {
     try {
-      const parameters: Parameter[] = arrow.getParameters().map((param: any) => ({
-        name: param.getName(),
-        type: param.getTypeNode()?.getText(),
-      }));
+      const parameters: Parameter[] = arrow
+        .getParameters()
+        .map((param: any) => ({
+          name: param.getName(),
+          type: param.getTypeNode()?.getText(),
+        }));
 
       const bodyNode = arrow.getBody();
       let body: ASTNode[] = [];
@@ -130,7 +132,7 @@ export class TypeScriptParser implements IParser {
         // 式の場合はreturn文として扱う
         body = [
           {
-            type: 'ReturnStatement',
+            type: "ReturnStatement",
             value: bodyNode.getText(),
             location: this.getLocation(bodyNode),
           },
@@ -138,7 +140,7 @@ export class TypeScriptParser implements IParser {
       }
 
       return {
-        type: 'FunctionDeclaration',
+        type: "FunctionDeclaration",
         name,
         parameters,
         body,
@@ -146,7 +148,7 @@ export class TypeScriptParser implements IParser {
         location: this.getLocation(arrow),
       };
     } catch (error) {
-      console.error('アロー関数解析エラー:', error);
+      console.error("アロー関数解析エラー:", error);
       return null;
     }
   }
@@ -190,13 +192,13 @@ export class TypeScriptParser implements IParser {
         default:
           // その他の文は式文として扱う
           return {
-            type: 'ExpressionStatement',
+            type: "ExpressionStatement",
             expression: stmt.getText(),
             location: this.getLocation(stmt),
           };
       }
     } catch (error) {
-      console.error('文解析エラー:', error);
+      console.error("文解析エラー:", error);
       return null;
     }
   }
@@ -209,7 +211,7 @@ export class TypeScriptParser implements IParser {
     const thenBranch = this.parseStatements(
       stmt.getThenStatement().getKind() === SyntaxKind.Block
         ? stmt.getThenStatement().getStatements()
-        : [stmt.getThenStatement()]
+        : [stmt.getThenStatement()],
     );
 
     const elseStmt = stmt.getElseStatement();
@@ -217,12 +219,12 @@ export class TypeScriptParser implements IParser {
       ? this.parseStatements(
           elseStmt.getKind() === SyntaxKind.Block
             ? elseStmt.getStatements()
-            : [elseStmt]
+            : [elseStmt],
         )
       : undefined;
 
     return {
-      type: 'IfStatement',
+      type: "IfStatement",
       condition,
       thenBranch,
       elseBranch,
@@ -242,11 +244,11 @@ export class TypeScriptParser implements IParser {
     const body = this.parseStatements(
       bodyStmt.getKind() === SyntaxKind.Block
         ? bodyStmt.getStatements()
-        : [bodyStmt]
+        : [bodyStmt],
     );
 
     return {
-      type: 'ForStatement',
+      type: "ForStatement",
       initializer,
       condition,
       incrementor,
@@ -264,11 +266,11 @@ export class TypeScriptParser implements IParser {
     const body = this.parseStatements(
       bodyStmt.getKind() === SyntaxKind.Block
         ? bodyStmt.getStatements()
-        : [bodyStmt]
+        : [bodyStmt],
     );
 
     return {
-      type: 'WhileStatement',
+      type: "WhileStatement",
       condition,
       body,
       location: this.getLocation(stmt),
@@ -287,7 +289,7 @@ export class TypeScriptParser implements IParser {
     // 最初の宣言のみを扱う（簡略化のため）
     const decl = declarations[0];
     return {
-      type: 'VariableDeclaration',
+      type: "VariableDeclaration",
       name: decl.getName(),
       varType: decl.getTypeNode()?.getText(),
       initializer: decl.getInitializer()?.getText(),
@@ -300,7 +302,7 @@ export class TypeScriptParser implements IParser {
    */
   private parseReturnStatement(stmt: any): ReturnStatementNode {
     return {
-      type: 'ReturnStatement',
+      type: "ReturnStatement",
       value: stmt.getExpression()?.getText(),
       location: this.getLocation(stmt),
     };
@@ -311,7 +313,7 @@ export class TypeScriptParser implements IParser {
    */
   private parseExpressionStatement(stmt: any): ExpressionStatementNode {
     return {
-      type: 'ExpressionStatement',
+      type: "ExpressionStatement",
       expression: stmt.getExpression().getText(),
       location: this.getLocation(stmt),
     };

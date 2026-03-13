@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { IRTransformer } from "../../core/transformer/IRTransformer";
-import { AST } from "../../core/parser/AST";
-import {
+import type { AST } from "../../core/parser/AST";
+import type {
   IRStartNode,
   IRProcessNode,
   IRControlFlowNode,
@@ -147,7 +147,7 @@ describe("IRTransformer", () => {
       expect(result.nodes).to.have.lengthOf(4);
 
       const ifNode = result.nodes.find(
-        (n) => n.type === "if"
+        (n) => n.type === "if",
       ) as IRControlFlowNode;
       expect(ifNode).to.exist;
       expect(ifNode.condition).to.equal("x > 0");
@@ -245,7 +245,7 @@ describe("IRTransformer", () => {
       expect(result.nodes).to.have.lengthOf(4);
 
       const forNode = result.nodes.find(
-        (n) => n.type === "for"
+        (n) => n.type === "for",
       ) as IRControlFlowNode;
       expect(forNode).to.exist;
       expect(forNode.condition).to.equal("i < 10");
@@ -293,7 +293,7 @@ describe("IRTransformer", () => {
       expect(result.nodes).to.have.lengthOf(4);
 
       const whileNode = result.nodes.find(
-        (n) => n.type === "while"
+        (n) => n.type === "while",
       ) as IRControlFlowNode;
       expect(whileNode).to.exist;
       expect(whileNode.condition).to.equal("x < 100");

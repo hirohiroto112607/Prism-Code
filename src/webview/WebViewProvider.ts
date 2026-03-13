@@ -1,11 +1,11 @@
-import * as vscode from 'vscode';
-import { IR } from '../core/ir/IR';
+import * as vscode from "vscode";
+import type { IR } from "../core/ir/IR";
 
 /**
  * WebViewを管理するプロバイダー
  */
 export class WebViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'prismcode.flowView';
+  public static readonly viewType = "prismcode.flowView";
 
   private _view?: vscode.WebviewView;
 
@@ -17,7 +17,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ): void {
     this._view = webviewView;
 
@@ -31,11 +31,11 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
     // WebViewからのメッセージを受信
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.type) {
-        case 'visualize':
+        case "visualize":
           // 可視化コマンドを実行
-          vscode.commands.executeCommand('prismcode.visualize');
+          vscode.commands.executeCommand("prismcode.visualize");
           break;
-        case 'switchViewMode':
+        case "switchViewMode":
           // ビュー切替
           this.switchViewMode(message.viewMode);
           break;
@@ -48,19 +48,19 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendFlowData(ir: IR): void {
     if (this._view) {
-      console.log('Sending flow data to WebView:', {
+      console.log("Sending flow data to WebView:", {
         nodes: ir.nodes.length,
-        edges: ir.edges.length
+        edges: ir.edges.length,
       });
       this._view.show?.(true);
       this._view.webview.postMessage({
-        type: 'updateFlow',
+        type: "updateFlow",
         data: ir,
       });
     } else {
-      console.error('WebView is not available');
+      console.error("WebView is not available");
       vscode.window.showErrorMessage(
-        'フロービューが開かれていません。サイドバーの「Prism Code」を開いてください。'
+        "フロービューが開かれていません。サイドバーの「Prism Code」を開いてください。",
       );
     }
   }
@@ -70,10 +70,10 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendMacroViewData(data: any): void {
     if (this._view) {
-      console.log('Sending macro view data to WebView:', data);
+      console.log("Sending macro view data to WebView:", data);
       this._view.show?.(true);
       this._view.webview.postMessage({
-        type: 'updateMacroView',
+        type: "updateMacroView",
         data: data,
       });
     }
@@ -84,10 +84,10 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
    */
   public sendOverviewData(data: any): void {
     if (this._view) {
-      console.log('Sending overview data to WebView:', data);
+      console.log("Sending overview data to WebView:", data);
       this._view.show?.(true);
       this._view.webview.postMessage({
-        type: 'updateOverviewView',
+        type: "updateOverviewView",
         data: data,
       });
     }
@@ -96,10 +96,10 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
   /**
    * ビュー切替
    */
-  public switchViewMode(viewMode: 'micro' | 'macro' | 'overview'): void {
+  public switchViewMode(viewMode: "micro" | "macro" | "overview"): void {
     if (this._view) {
       this._view.webview.postMessage({
-        type: 'switchViewMode',
+        type: "switchViewMode",
         viewMode: viewMode,
       });
     }
@@ -111,10 +111,22 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
   private _getHtmlForWebview(webview: vscode.Webview): string {
     // WebView UIのビルド済みファイルへのパス
     const scriptUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.js')
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "webview-ui",
+        "build",
+        "assets",
+        "index.js",
+      ),
     );
     const styleUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this._extensionUri, 'webview-ui', 'build', 'assets', 'index.css')
+      vscode.Uri.joinPath(
+        this._extensionUri,
+        "webview-ui",
+        "build",
+        "assets",
+        "index.css",
+      ),
     );
 
     const nonce = getNonce();
@@ -138,8 +150,9 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
 }
 
 function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = "";
+  const possible =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   for (let i = 0; i < 32; i++) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }

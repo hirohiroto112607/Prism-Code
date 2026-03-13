@@ -2,22 +2,22 @@
  * プロジェクト全体をスキャンしてインデックスを生成
  */
 
-import * as vscode from 'vscode';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { IndexManager } from './IndexManager';
-import { TypeScriptParser } from '../../parsers/typescript/TypeScriptParser';
-import { IRTransformer } from '../transformer/IRTransformer';
-import { SimpleScanner } from './SimpleScanner';
-import {
+import * as vscode from "vscode";
+import * as fs from "fs/promises";
+import * as path from "path";
+import type { IndexManager } from "./IndexManager";
+import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
+import { IRTransformer } from "../transformer/IRTransformer";
+import { SimpleScanner } from "./SimpleScanner";
+import type {
   ProjectIndex,
   FileIndexEntry,
   ProjectMacroViewData,
   MacroFunctionInfo,
   ModuleGroup,
   CallGraphEdge,
-} from './types';
-import { AST } from '../parser/AST';
+} from "./types";
+import type { AST } from "../parser/AST";
 
 export class ProjectScanner {
   private indexManager: IndexManager;
@@ -34,17 +34,20 @@ export class ProjectScanner {
    * プロジェクト全体をスキャン
    */
   async scanProject(workspaceRoot: string): Promise<ProjectIndex> {
-    console.log('プロジェクトスキャン開始:', workspaceRoot);
+    console.log("プロジェクトスキャン開始:", workspaceRoot);
 
     const config = this.indexManager.getConfig();
     const excludePatterns = config?.excludePatterns || [];
 
-    console.log('除外パターン:', excludePatterns);
+    console.log("除外パターン:", excludePatterns);
 
     // SimpleScannerを常に使用（より正確な除外パターン適用）
-    console.log('SimpleScannerでファイルを検索中...');
+    console.log("SimpleScannerでファイルを検索中...");
     const simpleScanner = new SimpleScanner();
-    const filePaths = await simpleScanner.scanDirectory(workspaceRoot, excludePatterns);
+    const filePaths = await simpleScanner.scanDirectory(
+      workspaceRoot,
+      excludePatterns,
+    );
     console.log(`SimpleScannerで${filePaths.length}個のファイルを発見`);
 
     const fileEntries: FileIndexEntry[] = [];
@@ -66,7 +69,7 @@ export class ProjectScanner {
     if (!projectIndex) {
       // インデックスが存在しない場合は新規作成
       projectIndex = {
-        version: '1.0.0',
+        version: "1.0.0",
         projectName: path.basename(workspaceRoot),
         projectRoot: workspaceRoot,
         lastUpdated: new Date().toISOString(),
@@ -93,7 +96,7 @@ export class ProjectScanner {
 
     await this.indexManager.saveProjectIndex(projectIndex);
 
-    console.log('プロジェクトスキャン完了');
+    console.log("プロジェクトスキャン完了");
     return projectIndex;
   }
 
@@ -102,7 +105,7 @@ export class ProjectScanner {
    */
   private async analyzeFile(
     filePath: string,
-    workspaceRoot: string
+    workspaceRoot: string,
   ): Promise<FileIndexEntry | undefined> {
     const relativePath = path.relative(workspaceRoot, filePath);
 
@@ -117,12 +120,11 @@ export class ProjectScanner {
     console.log(`解析中: ${relativePath}`);
 
     // ファイルを読み込み
-    const code = await fs.readFile(filePath, 'utf-8');
+    const code = await fs.readFile(filePath, "utf-8");
     const fileHash = await this.indexManager.calculateFileHash(filePath);
 
     // パース
     const ast = this.parser.parse(code, filePath);
-
 
     // IR変換
     const ir = this.transformer.transform(ast, {
@@ -140,7 +142,7 @@ export class ProjectScanner {
     await this.indexManager.saveIRCache(filePath, cacheEntry);
 
     // メトリクスを計算
-    const lineCount = code.split('\n').length;
+    const lineCount = code.split("\n").length;
     const functionCount = this.countFunctions(ast);
     const classCount = this.countClasses(ast);
     const complexity = this.calculateComplexity(ast);
@@ -169,10 +171,12 @@ export class ProjectScanner {
   /**
    * マクロビューデータを生成
    */
-  async generateMacroViewData(workspaceRoot: string): Promise<ProjectMacroViewData> {
+  async generateMacroViewData(
+    workspaceRoot: string,
+  ): Promise<ProjectMacroViewData> {
     const projectIndex = this.indexManager.getProjectIndex();
     if (!projectIndex) {
-      throw new Error('プロジェクトインデックスが初期化されていません');
+      throw new Error("プロジェクトインデックスが初期化されていません");
     }
 
     // モジュールグループを生成（フォルダーベース）
@@ -185,7 +189,7 @@ export class ProjectScanner {
     const callGraph: CallGraphEdge[] = [];
 
     const macroViewData: ProjectMacroViewData = {
-      version: '1.0.0',
+      version: "1.0.0",
       generatedAt: new Date().toISOString(),
       modules,
       functions,
@@ -207,7 +211,7 @@ export class ProjectScanner {
    */
   private generateModuleGroups(
     projectIndex: ProjectIndex,
-    workspaceRoot: string
+    workspaceRoot: string,
   ): ModuleGroup[] {
     const folderMap = new Map<string, FileIndexEntry[]>();
 
@@ -226,7 +230,7 @@ export class ProjectScanner {
 
     for (const [folder, files] of folderMap.entries()) {
       const moduleId = `module_${moduleIdCounter++}`;
-      const moduleName = folder === '.' ? 'Root' : path.basename(folder);
+      const moduleName = folder === "." ? "Root" : path.basename(folder);
 
       const totalLines = files.reduce((sum, f) => sum + f.lineCount, 0);
       const totalFunctions = files.reduce((sum, f) => sum + f.functionCount, 0);
@@ -236,7 +240,7 @@ export class ProjectScanner {
       modules.push({
         id: moduleId,
         name: moduleName,
-        type: 'folder',
+        type: "folder",
         files: files.map((f) => f.filePath),
         totalLines,
         totalFunctions,
@@ -254,7 +258,7 @@ export class ProjectScanner {
    */
   private async collectFunctions(
     projectIndex: ProjectIndex,
-    workspaceRoot: string
+    workspaceRoot: string,
   ): Promise<MacroFunctionInfo[]> {
     const functions: MacroFunctionInfo[] = [];
 
@@ -274,32 +278,36 @@ export class ProjectScanner {
 
       // IRから関数ノードを抽出（type: 'start'ノードから）
       for (const node of ir.nodes) {
-        if (node.type === 'start') {
+        if (node.type === "start") {
           // ラベルから関数名を抽出（例: "関数開始: greet" → "greet"）
           const labelMatch = node.label.match(/関数開始:\s*(.+)/);
-          const functionName = labelMatch ? labelMatch[1] : 'anonymous';
+          const functionName = labelMatch ? labelMatch[1] : "anonymous";
 
           // 対応するendノードを見つける
           const endNode = ir.nodes.find(
-            (n: any) => n.type === 'end' && n.label.includes(functionName)
+            (n: any) => n.type === "end" && n.label.includes(functionName),
           );
 
           // 開始ノードと終了ノードの間にあるノードを収集
           const startIndex = ir.nodes.indexOf(node);
-          const endIndex = endNode ? ir.nodes.indexOf(endNode) : ir.nodes.length;
+          const endIndex = endNode
+            ? ir.nodes.indexOf(endNode)
+            : ir.nodes.length;
           const bodyNodes = ir.nodes.slice(startIndex + 1, endIndex);
 
           // locationを持つノードから位置情報を取得
           const nodesWithLocation = bodyNodes.filter((n: any) => n.location);
-          const location = nodesWithLocation.length > 0
-            ? {
-                start: nodesWithLocation[0].location.start,
-                end: nodesWithLocation[nodesWithLocation.length - 1].location.end,
-              }
-            : {
-                start: { line: 1, column: 0 },
-                end: { line: 1, column: 0 },
-              };
+          const location =
+            nodesWithLocation.length > 0
+              ? {
+                  start: nodesWithLocation[0].location.start,
+                  end: nodesWithLocation[nodesWithLocation.length - 1].location
+                    .end,
+                }
+              : {
+                  start: { line: 1, column: 0 },
+                  end: { line: 1, column: 0 },
+                };
 
           functions.push({
             id: node.id,
@@ -322,13 +330,13 @@ export class ProjectScanner {
    * ASTから関数の数をカウント
    */
   private countFunctions(ast: AST): number {
-    if (ast.type !== 'Program') {
+    if (ast.type !== "Program") {
       return 0;
     }
 
     let count = 0;
     for (const node of ast.body) {
-      if (node.type === 'FunctionDeclaration') {
+      if (node.type === "FunctionDeclaration") {
         count++;
       }
     }
@@ -348,7 +356,7 @@ export class ProjectScanner {
    * サイクロマティック複雑度を計算（簡易版）
    */
   private calculateComplexity(ast: AST): number {
-    if (ast.type !== 'Program') {
+    if (ast.type !== "Program") {
       return 1;
     }
 
@@ -356,7 +364,7 @@ export class ProjectScanner {
 
     const countComplexity = (nodes: any[]): void => {
       for (const node of nodes) {
-        if (node.type === 'IfStatement') {
+        if (node.type === "IfStatement") {
           complexity++;
           if (node.thenBranch) {
             countComplexity(node.thenBranch);
@@ -364,7 +372,10 @@ export class ProjectScanner {
           if (node.elseBranch) {
             countComplexity(node.elseBranch);
           }
-        } else if (node.type === 'ForStatement' || node.type === 'WhileStatement') {
+        } else if (
+          node.type === "ForStatement" ||
+          node.type === "WhileStatement"
+        ) {
           complexity++;
           if (node.body) {
             countComplexity(node.body);
@@ -400,14 +411,14 @@ export class ProjectScanner {
   private detectLanguage(filePath: string): string {
     const ext = path.extname(filePath);
     switch (ext) {
-      case '.ts':
-      case '.tsx':
-        return 'typescript';
-      case '.js':
-      case '.jsx':
-        return 'javascript';
+      case ".ts":
+      case ".tsx":
+        return "typescript";
+      case ".js":
+      case ".jsx":
+        return "javascript";
       default:
-        return 'unknown';
+        return "unknown";
     }
   }
 
@@ -418,9 +429,9 @@ export class ProjectScanner {
     let complexity = 1; // 基本パス
 
     for (const node of bodyNodes) {
-      if (node.type === 'if') {
+      if (node.type === "if") {
         complexity++; // if文で1増加
-      } else if (node.type === 'for' || node.type === 'while') {
+      } else if (node.type === "for" || node.type === "while") {
         complexity++; // ループで1増加
       }
     }
@@ -432,13 +443,15 @@ export class ProjectScanner {
    * 関数本体にループが含まれるかチェック
    */
   private hasFunctionLoops(bodyNodes: any[]): boolean {
-    return bodyNodes.some((node: any) => node.type === 'for' || node.type === 'while');
+    return bodyNodes.some(
+      (node: any) => node.type === "for" || node.type === "while",
+    );
   }
 
   /**
    * 関数本体に条件分岐が含まれるかチェック
    */
   private hasFunctionConditionals(bodyNodes: any[]): boolean {
-    return bodyNodes.some((node: any) => node.type === 'if');
+    return bodyNodes.some((node: any) => node.type === "if");
   }
 }

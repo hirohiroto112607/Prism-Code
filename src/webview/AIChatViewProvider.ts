@@ -1,11 +1,11 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 /**
  * サイドバーにAIチャット用のUIを表示するWebViewProvider
  * Phase 3でGemini API統合予定
  */
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
-  public static readonly viewType = 'prismcode.aiChat';
+  public static readonly viewType = "prismcode.aiChat";
 
   private _view?: vscode.WebviewView;
 
@@ -17,7 +17,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public resolveWebviewView(
     webviewView: vscode.WebviewView,
     _context: vscode.WebviewViewResolveContext,
-    _token: vscode.CancellationToken
+    _token: vscode.CancellationToken,
   ): void {
     this._view = webviewView;
 
@@ -31,24 +31,24 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     // WebViewからのメッセージを受信
     webviewView.webview.onDidReceiveMessage((message) => {
       switch (message.type) {
-        case 'sendMessage':
+        case "sendMessage":
           // TODO: Phase 3でGemini APIと統合
           this._handleUserMessage(message.text);
           break;
-        case 'visualize':
-          vscode.commands.executeCommand('prismcode.visualize');
+        case "visualize":
+          vscode.commands.executeCommand("prismcode.visualize");
           break;
-        case 'showMacroView':
-          vscode.commands.executeCommand('prismcode.showMacroView');
+        case "showMacroView":
+          vscode.commands.executeCommand("prismcode.showMacroView");
           break;
-        case 'generateIndex':
-          vscode.commands.executeCommand('prismcode.generateIndex');
+        case "generateIndex":
+          vscode.commands.executeCommand("prismcode.generateIndex");
           break;
-        case 'loadCachedMacro':
-          vscode.commands.executeCommand('prismcode.loadCachedMacroView');
+        case "loadCachedMacro":
+          vscode.commands.executeCommand("prismcode.loadCachedMacroView");
           break;
-        case 'exportAI':
-          vscode.commands.executeCommand('prismcode.exportForAITools');
+        case "exportAI":
+          vscode.commands.executeCommand("prismcode.exportForAITools");
           break;
       }
     });
@@ -62,7 +62,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     // 現在はダミーレスポンスを返す
     setTimeout(() => {
       this._view?.webview.postMessage({
-        type: 'aiResponse',
+        type: "aiResponse",
         text: `[開発中] あなたのメッセージ: "${text}"`,
       });
     }, 500);
@@ -380,8 +380,9 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
 }
 
 function getNonce(): string {
-  let text = '';
-  const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+  let text = "";
+  const possible =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   for (let i = 0; i < 32; i++) {
     text += possible.charAt(Math.floor(Math.random() * possible.length));
   }

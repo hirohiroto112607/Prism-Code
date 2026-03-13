@@ -58,7 +58,7 @@ export interface FileIndexEntry {
 export interface ModuleGroup {
   id: string;
   name: string; // 'Authentication', 'Data Processing', etc.
-  type: 'folder' | 'feature' | 'ai-generated';
+  type: "folder" | "feature" | "ai-generated";
 
   files: string[]; // ファイルパスのリスト
   description?: string; // AI生成の説明
@@ -132,7 +132,7 @@ export interface CallGraphEdge {
   id: string;
   from: string; // 関数ID
   to: string; // 関数ID
-  type: 'call' | 'import' | 'dependency';
+  type: "call" | "import" | "dependency";
   weight?: number; // 呼び出し頻度（静的解析では推定）
 }
 
@@ -150,7 +150,7 @@ export interface DependencyGraph {
 export interface DependencyNode {
   id: string; // ファイルパス
   label: string; // ファイル名
-  type: 'file' | 'module' | 'external';
+  type: "file" | "module" | "external";
   moduleGroup?: string; // 所属モジュールID
 }
 
@@ -158,7 +158,7 @@ export interface DependencyEdge {
   id: string;
   from: string; // ファイルパス
   to: string; // ファイルパス
-  type: 'import' | 'require' | 'dynamic-import';
+  type: "import" | "require" | "dynamic-import";
 }
 
 /**
@@ -183,7 +183,7 @@ export interface AISummaries {
     [filePath: string]: {
       summary: string;
       purpose: string;
-      complexity: 'low' | 'medium' | 'high';
+      complexity: "low" | "medium" | "high";
     };
   };
 }
@@ -204,7 +204,7 @@ export interface PrismCodeConfig {
 
   // AI機能の設定
   aiEnabled: boolean;
-  aiProvider?: 'gemini' | 'openai' | 'claude';
+  aiProvider?: "gemini" | "openai" | "claude";
   aiApiKey?: string; // 暗号化して保存すべき
 
   // エクスポート設定

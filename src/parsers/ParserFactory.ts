@@ -1,6 +1,6 @@
-import * as path from 'path';
-import { IParser } from '../core/parser/IParser';
-import { TypeScriptParser } from './typescript/TypeScriptParser';
+import * as path from "path";
+import type { IParser } from "../core/parser/IParser";
+import { TypeScriptParser } from "./typescript/TypeScriptParser";
 
 /**
  * パーサーファクトリー
@@ -28,7 +28,7 @@ export class ParserFactory {
   static getParser(filePath: string): IParser {
     const ext = path.extname(filePath);
 
-    for (const parser of this.parsers) {
+    for (const parser of ParserFactory.parsers) {
       const supportedExtensions = parser.getSupportedExtensions();
       if (supportedExtensions.includes(ext)) {
         return parser;
@@ -45,7 +45,7 @@ export class ParserFactory {
   static getSupportedExtensions(): string[] {
     const extensions: string[] = [];
 
-    for (const parser of this.parsers) {
+    for (const parser of ParserFactory.parsers) {
       extensions.push(...parser.getSupportedExtensions());
     }
 
@@ -58,7 +58,7 @@ export class ParserFactory {
    * @returns 言語名の配列
    */
   static getSupportedLanguages(): string[] {
-    return this.parsers.map((parser) => parser.getSupportedLanguage());
+    return ParserFactory.parsers.map((parser) => parser.getSupportedLanguage());
   }
 
   /**
@@ -66,9 +66,9 @@ export class ParserFactory {
    * @returns globパターン（例: "**\/*.{ts,tsx,js,jsx}"）
    */
   static getGlobPattern(): string {
-    const extensions = this.getSupportedExtensions();
+    const extensions = ParserFactory.getSupportedExtensions();
     // ".ts" -> "ts" に変換
     const extWithoutDot = extensions.map((ext) => ext.substring(1));
-    return `**/*.{${extWithoutDot.join(',')}}`;
+    return `**/*.{${extWithoutDot.join(",")}}`;
   }
 }

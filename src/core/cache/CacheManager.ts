@@ -3,13 +3,13 @@
  * すべてのキャッシュ操作を統括し、鮮度チェック・自動更新を管理する
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { IndexManager } from '../index/IndexManager';
-import { AST } from '../parser/AST';
-import { IR } from '../ir/IR';
-import { TypeScriptParser } from '../../parsers/typescript/TypeScriptParser';
-import { IRTransformer } from '../transformer/IRTransformer';
+import * as fs from "fs/promises";
+import * as path from "path";
+import type { IndexManager } from "../index/IndexManager";
+import type { AST } from "../parser/AST";
+import type { IR } from "../ir/IR";
+import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
+import { IRTransformer } from "../transformer/IRTransformer";
 
 export interface CacheStats {
   totalFiles: number;
@@ -30,7 +30,7 @@ export interface CacheEntry<T> {
 export interface CacheResult<T> {
   hit: boolean;
   data?: T;
-  source: 'cache' | 'fresh' | 'error';
+  source: "cache" | "fresh" | "error";
   processingTime?: number;
 }
 
@@ -65,7 +65,7 @@ export class CacheManager {
     return {
       hit: false,
       data: ast,
-      source: 'fresh',
+      source: "fresh",
       processingTime: Date.now() - startTime,
     };
   }
@@ -93,7 +93,7 @@ export class CacheManager {
       return {
         hit: false,
         data: ir,
-        source: 'fresh',
+        source: "fresh",
         processingTime: Date.now() - startTime,
       };
     }
@@ -113,23 +113,29 @@ export class CacheManager {
 
           if (cacheAge < maxAge) {
             this.cacheHits++;
-            console.log(`✅ IRキャッシュヒット: ${path.basename(filePath)} (${cacheAge}ms前)`);
+            console.log(
+              `✅ IRキャッシュヒット: ${path.basename(filePath)} (${cacheAge}ms前)`,
+            );
 
             return {
               hit: true,
               data: cachedIR.data,
-              source: 'cache',
+              source: "cache",
               processingTime: Date.now() - startTime,
             };
           } else {
-            console.log(`⏰ IRキャッシュ期限切れ: ${path.basename(filePath)} (${cacheAge}ms前)`);
+            console.log(
+              `⏰ IRキャッシュ期限切れ: ${path.basename(filePath)} (${cacheAge}ms前)`,
+            );
           }
         }
       }
 
       // キャッシュミス → 新規生成
       this.cacheMisses++;
-      console.log(`❌ IRキャッシュミス: ${path.basename(filePath)} - 新規生成中...`);
+      console.log(
+        `❌ IRキャッシュミス: ${path.basename(filePath)} - 新規生成中...`,
+      );
 
       // ASTを取得（インメモリのみ）
       const astResult = await this.getAST(filePath, code);
@@ -158,10 +164,9 @@ export class CacheManager {
       return {
         hit: false,
         data: ir,
-        source: 'fresh',
+        source: "fresh",
         processingTime: Date.now() - startTime,
       };
-
     } catch (error) {
       console.error(`❌ IRキャッシュ処理エラー: ${filePath}`, error);
 
@@ -175,7 +180,7 @@ export class CacheManager {
       return {
         hit: false,
         data: ir,
-        source: 'error',
+        source: "error",
         processingTime: Date.now() - startTime,
       };
     }
@@ -184,12 +189,16 @@ export class CacheManager {
   /**
    * ファイルインデックスエントリを更新
    */
-  private async updateFileIndex(filePath: string, ast: AST, fileHash: string): Promise<void> {
+  private async updateFileIndex(
+    filePath: string,
+    ast: AST,
+    fileHash: string,
+  ): Promise<void> {
     try {
       const stats = await fs.stat(filePath);
       const relativePath = path.relative(
-        this.indexManager.getProjectIndex()?.projectRoot || '',
-        filePath
+        this.indexManager.getProjectIndex()?.projectRoot || "",
+        filePath,
       );
 
       // ASTから基本メトリクスを抽出
@@ -200,7 +209,7 @@ export class CacheManager {
       const entry = {
         filePath: relativePath,
         fileHash,
-        language: 'typescript',
+        language: "typescript",
         lastModified: stats.mtime.toISOString(),
         lastAnalyzed: new Date().toISOString(),
         lineCount,
@@ -213,7 +222,7 @@ export class CacheManager {
 
       await this.indexManager.updateFileEntry(entry);
     } catch (error) {
-      console.error('インデックス更新エラー:', error);
+      console.error("インデックス更新エラー:", error);
     }
   }
 
@@ -223,7 +232,7 @@ export class CacheManager {
   private countFunctions(ast: AST): number {
     let count = 0;
     for (const node of ast.body) {
-      if (node.type === 'FunctionDeclaration') {
+      if (node.type === "FunctionDeclaration") {
         count++;
       }
     }
@@ -244,8 +253,8 @@ export class CacheManager {
    */
   private async countLines(filePath: string): Promise<number> {
     try {
-      const content = await fs.readFile(filePath, 'utf-8');
-      return content.split('\n').length;
+      const content = await fs.readFile(filePath, "utf-8");
+      return content.split("\n").length;
     } catch {
       return 0;
     }
@@ -259,23 +268,29 @@ export class CacheManager {
 
     try {
       const prismcodeDir = path.join(
-        this.indexManager.getProjectIndex()?.projectRoot || '',
-        '.prismcode'
+        this.indexManager.getProjectIndex()?.projectRoot || "",
+        ".prismcode",
       );
 
       const relativePath = path.relative(
-        this.indexManager.getProjectIndex()?.projectRoot || '',
-        filePath
+        this.indexManager.getProjectIndex()?.projectRoot || "",
+        filePath,
       );
-      const cacheFileName = relativePath.replace(/[\/\\]/g, '-').replace(/\./g, '-') + '.json';
+      const cacheFileName =
+        relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-") + ".json";
 
       // IRキャッシュ削除
-      const irCachePath = path.join(prismcodeDir, 'cache', 'ir-cache', cacheFileName);
+      const irCachePath = path.join(
+        prismcodeDir,
+        "cache",
+        "ir-cache",
+        cacheFileName,
+      );
       await fs.unlink(irCachePath).catch(() => {});
 
       console.log(`✅ キャッシュ無効化完了: ${path.basename(filePath)}`);
     } catch (error) {
-      console.error('キャッシュ無効化エラー:', error);
+      console.error("キャッシュ無効化エラー:", error);
     }
   }
 
@@ -283,16 +298,16 @@ export class CacheManager {
    * すべてのキャッシュをクリア
    */
   async clearAllCaches(): Promise<void> {
-    console.log('🗑️ すべてのキャッシュをクリア中...');
+    console.log("🗑️ すべてのキャッシュをクリア中...");
 
     try {
       const prismcodeDir = path.join(
-        this.indexManager.getProjectIndex()?.projectRoot || '',
-        '.prismcode'
+        this.indexManager.getProjectIndex()?.projectRoot || "",
+        ".prismcode",
       );
 
       // IRキャッシュディレクトリをクリア
-      const irCacheDir = path.join(prismcodeDir, 'cache', 'ir-cache');
+      const irCacheDir = path.join(prismcodeDir, "cache", "ir-cache");
       const irFiles = await fs.readdir(irCacheDir).catch(() => []);
       for (const file of irFiles) {
         await fs.unlink(path.join(irCacheDir, file)).catch(() => {});
@@ -302,9 +317,11 @@ export class CacheManager {
       this.cacheHits = 0;
       this.cacheMisses = 0;
 
-      console.log(`✅ すべてのキャッシュをクリアしました（${irFiles.length}ファイル）`);
+      console.log(
+        `✅ すべてのキャッシュをクリアしました（${irFiles.length}ファイル）`,
+      );
     } catch (error) {
-      console.error('キャッシュクリアエラー:', error);
+      console.error("キャッシュクリアエラー:", error);
       throw error;
     }
   }
@@ -315,20 +332,22 @@ export class CacheManager {
   async getStats(): Promise<CacheStats> {
     try {
       const prismcodeDir = path.join(
-        this.indexManager.getProjectIndex()?.projectRoot || '',
-        '.prismcode'
+        this.indexManager.getProjectIndex()?.projectRoot || "",
+        ".prismcode",
       );
 
       const projectIndex = this.indexManager.getProjectIndex();
       const totalFiles = projectIndex?.files.length || 0;
 
       // キャッシュファイルをカウント・サイズを計算
-      const irCacheDir = path.join(prismcodeDir, 'cache', 'ir-cache');
+      const irCacheDir = path.join(prismcodeDir, "cache", "ir-cache");
       const irFiles = await fs.readdir(irCacheDir).catch(() => []);
 
       let totalSize = 0;
       for (const file of irFiles) {
-        const stat = await fs.stat(path.join(irCacheDir, file)).catch(() => null);
+        const stat = await fs
+          .stat(path.join(irCacheDir, file))
+          .catch(() => null);
         if (stat) {
           totalSize += stat.size;
         }
@@ -336,7 +355,8 @@ export class CacheManager {
 
       const cachedFiles = irFiles.length;
       const totalRequests = this.cacheHits + this.cacheMisses;
-      const cacheHitRate = totalRequests > 0 ? (this.cacheHits / totalRequests) * 100 : 0;
+      const cacheHitRate =
+        totalRequests > 0 ? (this.cacheHits / totalRequests) * 100 : 0;
 
       return {
         totalFiles,
@@ -347,7 +367,7 @@ export class CacheManager {
         newestCache: null, // TODO: 実装
       };
     } catch (error) {
-      console.error('統計取得エラー:', error);
+      console.error("統計取得エラー:", error);
       return {
         totalFiles: 0,
         cachedFiles: 0,

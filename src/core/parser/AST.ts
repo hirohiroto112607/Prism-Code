@@ -10,7 +10,7 @@ export interface SourceLocation {
  * 抽象構文木のルート
  */
 export interface AST {
-  type: 'Program';
+  type: "Program";
   body: ASTNode[];
   sourceFile?: string;
 }
@@ -31,7 +31,7 @@ export type ASTNode =
  * 関数宣言ノード
  */
 export interface FunctionNode {
-  type: 'FunctionDeclaration';
+  type: "FunctionDeclaration";
   name: string;
   parameters: Parameter[];
   body: ASTNode[];
@@ -51,7 +51,7 @@ export interface Parameter {
  * If文ノード
  */
 export interface IfStatementNode {
-  type: 'IfStatement';
+  type: "IfStatement";
   condition: string; // 簡略化のため文字列で保持
   thenBranch: ASTNode[];
   elseBranch?: ASTNode[];
@@ -62,7 +62,7 @@ export interface IfStatementNode {
  * For文ノード
  */
 export interface ForStatementNode {
-  type: 'ForStatement';
+  type: "ForStatement";
   initializer?: string;
   condition?: string;
   incrementor?: string;
@@ -74,7 +74,7 @@ export interface ForStatementNode {
  * While文ノード
  */
 export interface WhileStatementNode {
-  type: 'WhileStatement';
+  type: "WhileStatement";
   condition: string;
   body: ASTNode[];
   location: SourceLocation;
@@ -84,7 +84,7 @@ export interface WhileStatementNode {
  * 変数宣言ノード
  */
 export interface VariableDeclarationNode {
-  type: 'VariableDeclaration';
+  type: "VariableDeclaration";
   name: string;
   varType?: string;
   initializer?: string;
@@ -95,7 +95,7 @@ export interface VariableDeclarationNode {
  * Return文ノード
  */
 export interface ReturnStatementNode {
-  type: 'ReturnStatement';
+  type: "ReturnStatement";
   value?: string;
   location: SourceLocation;
 }
@@ -104,7 +104,7 @@ export interface ReturnStatementNode {
  * 式文ノード
  */
 export interface ExpressionStatementNode {
-  type: 'ExpressionStatement';
+  type: "ExpressionStatement";
   expression: string;
   location: SourceLocation;
 }

@@ -50,6 +50,20 @@ AIに渡すことで得られるもの：
               ノードクリックで元のコード行にジャンプ。
               ライブデバッグ時は変数値がリアルタイムに更新される。
 
+■ AIによるビジュアル自動選択（マルチテンプレート）
+
+コードの内容をAIが解析し、最適な図の種類を自動選択します。
+ユーザーはUIのバーから手動で切り替えることも可能です。
+
+- flowchart（フローチャート）: if/for/while などの制御フロー
+- class-diagram（クラス図）: class / interface / extends / implements
+- screen-transition（画面遷移図）: React Router / navigate() / useRouter
+- sequence-diagram（シーケンス図）: async/await チェーン・API呼び出し順序
+- state-machine（状態遷移図）: useState / useReducer / XState
+- dependency-graph（依存関係グラフ）: import/export が主体のファイル
+
+AI利用不可時は静的ルール（正規表現スコアリング）でフォールバック選択。
+
 ---
 
 ■ AI対応

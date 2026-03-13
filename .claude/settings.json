@@ -1,11 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(* --version)",
-      "Bash(* --help *)"
-    ],
-    "deny": [
-      "Bash(git push *)"
-    ]
+    "allow": ["Bash(* --version)", "Bash(* --help *)"],
+    "deny": ["Bash(git push *)"]
   }
 }
