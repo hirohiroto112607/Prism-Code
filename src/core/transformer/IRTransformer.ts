@@ -1,5 +1,15 @@
-import type { AST, ASTNode } from "../parser/AST";
-import { type IR, type IRNode, type IREdge, IRMetadata } from "../ir/IR";
+import type { IR, IREdge, IRNode } from "../ir/IR";
+import type {
+  AST,
+  ASTNode,
+  ExpressionStatementNode,
+  ForStatementNode,
+  FunctionNode,
+  IfStatementNode,
+  ReturnStatementNode,
+  VariableDeclarationNode,
+  WhileStatementNode,
+} from "../parser/AST";
 
 /**
  * AST → IR 変換クラス
@@ -68,7 +78,7 @@ export class IRTransformer {
   /**
    * 関数宣言を変換
    */
-  private transformFunction(fn: any): string {
+  private transformFunction(fn: FunctionNode): string {
     const startId = this.generateNodeId();
 
     // 開始ノード
@@ -129,7 +139,7 @@ export class IRTransformer {
    * If文を変換
    * @returns [入口ID（ifノード）, ...出口IDのリスト（then/else分岐の末端）]
    */
-  private transformIf(ifNode: any): string[] {
+  private transformIf(ifNode: IfStatementNode): string[] {
     const nodeId = this.generateNodeId();
 
     // 制御フローノードを追加
@@ -202,7 +212,7 @@ export class IRTransformer {
    * For文を変換
    * @returns [入口ID（ループノード）, 出口ID（ループ終了時、ループノード自体）]
    */
-  private transformFor(forNode: any): string[] {
+  private transformFor(forNode: ForStatementNode): string[] {
     const nodeId = this.generateNodeId();
 
     // 制御フローノードを追加
@@ -249,7 +259,7 @@ export class IRTransformer {
    * While文を変換
    * @returns [入口ID（ループノード）, 出口ID（ループ終了時、ループノード自体）]
    */
-  private transformWhile(whileNode: any): string[] {
+  private transformWhile(whileNode: WhileStatementNode): string[] {
     const nodeId = this.generateNodeId();
 
     // 制御フローノードを追加
@@ -295,7 +305,7 @@ export class IRTransformer {
   /**
    * 変数宣言を変換
    */
-  private transformVariable(varNode: any): string {
+  private transformVariable(varNode: VariableDeclarationNode): string {
     const nodeId = this.generateNodeId();
 
     const label = varNode.initializer
@@ -316,7 +326,7 @@ export class IRTransformer {
   /**
    * Return文を変換
    */
-  private transformReturn(returnNode: any): string {
+  private transformReturn(returnNode: ReturnStatementNode): string {
     const nodeId = this.generateNodeId();
 
     const label = returnNode.value ? `return ${returnNode.value}` : "return";
@@ -334,7 +344,7 @@ export class IRTransformer {
   /**
    * 式文を変換
    */
-  private transformExpression(exprNode: any): string {
+  private transformExpression(exprNode: ExpressionStatementNode): string {
     const nodeId = this.generateNodeId();
 
     this.nodes.push({

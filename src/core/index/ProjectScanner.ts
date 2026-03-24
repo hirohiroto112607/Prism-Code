@@ -2,22 +2,21 @@
  * プロジェクト全体をスキャンしてインデックスを生成
  */
 
-import * as vscode from "vscode";
-import * as fs from "fs/promises";
-import * as path from "path";
-import type { IndexManager } from "./IndexManager";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
+import type { AST } from "../parser/AST";
 import { IRTransformer } from "../transformer/IRTransformer";
+import type { IndexManager } from "./IndexManager";
 import { SimpleScanner } from "./SimpleScanner";
 import type {
-  ProjectIndex,
+  CallGraphEdge,
   FileIndexEntry,
-  ProjectMacroViewData,
   MacroFunctionInfo,
   ModuleGroup,
-  CallGraphEdge,
+  ProjectIndex,
+  ProjectMacroViewData,
 } from "./types";
-import type { AST } from "../parser/AST";
 
 export class ProjectScanner {
   private indexManager: IndexManager;
@@ -211,7 +210,7 @@ export class ProjectScanner {
    */
   private generateModuleGroups(
     projectIndex: ProjectIndex,
-    workspaceRoot: string,
+    _workspaceRoot: string,
   ): ModuleGroup[] {
     const folderMap = new Map<string, FileIndexEntry[]>();
 
@@ -221,7 +220,7 @@ export class ProjectScanner {
       if (!folderMap.has(dir)) {
         folderMap.set(dir, []);
       }
-      folderMap.get(dir)!.push(file);
+      folderMap.get(dir)?.push(file);
     }
 
     // モジュールグループを生成
@@ -347,7 +346,7 @@ export class ProjectScanner {
   /**
    * ASTからクラスの数をカウント
    */
-  private countClasses(ast: AST): number {
+  private countClasses(_ast: AST): number {
     // TODO: クラス定義のサポート
     return 0;
   }
@@ -392,7 +391,7 @@ export class ProjectScanner {
   /**
    * import文を抽出
    */
-  private extractImports(ast: AST): string[] {
+  private extractImports(_ast: AST): string[] {
     // TODO: import文の解析
     return [];
   }
@@ -400,7 +399,7 @@ export class ProjectScanner {
   /**
    * export文を抽出
    */
-  private extractExports(ast: AST): string[] {
+  private extractExports(_ast: AST): string[] {
     // TODO: export文の解析
     return [];
   }

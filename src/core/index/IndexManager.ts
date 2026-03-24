@@ -2,17 +2,18 @@
  * .prismcodeフォルダーのインデックスを管理するマネージャー
  */
 
-import * as vscode from "vscode";
-import * as fs from "fs/promises";
-import * as path from "path";
-import * as crypto from "crypto";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
+import type { CacheEntry } from "../cache/CacheManager";
+import type { IR } from "../ir/IR";
 import type {
-  ProjectIndex,
-  FileIndexEntry,
-  ProjectMacroViewData,
-  DependencyGraph,
   AISummaries,
+  DependencyGraph,
+  FileIndexEntry,
   PrismCodeConfig,
+  ProjectIndex,
+  ProjectMacroViewData,
 } from "./types";
 
 export class IndexManager {
@@ -458,10 +459,9 @@ index.json
   /**
    * IRキャッシュを保存
    */
-  async saveIRCache(filePath: string, ir: any): Promise<void> {
+  async saveIRCache(filePath: string, ir: CacheEntry<IR>): Promise<void> {
     const relativePath = path.relative(this.workspaceRoot, filePath);
-    const cacheFileName =
-      relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-") + ".json";
+    const cacheFileName = `${relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-")}.json`;
     const cachePath = path.join(
       this.prismcodeDir,
       "cache",
@@ -475,11 +475,10 @@ index.json
   /**
    * IRキャッシュを読み込み
    */
-  async loadIRCache(filePath: string): Promise<any | undefined> {
+  async loadIRCache(filePath: string): Promise<CacheEntry<IR> | undefined> {
     try {
       const relativePath = path.relative(this.workspaceRoot, filePath);
-      const cacheFileName =
-        relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-") + ".json";
+      const cacheFileName = `${relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-")}.json`;
       const cachePath = path.join(
         this.prismcodeDir,
         "cache",
@@ -489,7 +488,7 @@ index.json
 
       const content = await fs.readFile(cachePath, "utf-8");
       return JSON.parse(content);
-    } catch (error) {
+    } catch (_error) {
       return undefined;
     }
   }

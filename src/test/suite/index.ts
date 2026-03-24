@@ -1,6 +1,6 @@
-import * as path from "path";
-import Mocha from "mocha";
+import * as path from "node:path";
 import { glob } from "glob";
+import Mocha from "mocha";
 
 export function run(): Promise<void> {
   // Mochaテストランナーを作成
@@ -17,7 +17,9 @@ export function run(): Promise<void> {
     glob("**/**.test.js", { cwd: testsRoot })
       .then((files) => {
         // 各テストファイルをMochaに追加
-        files.forEach((f) => mocha.addFile(path.resolve(testsRoot, f)));
+        for (const f of files) {
+          mocha.addFile(path.resolve(testsRoot, f));
+        }
 
         try {
           // テストを実行

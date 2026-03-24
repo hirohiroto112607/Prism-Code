@@ -4,9 +4,9 @@
 
 // VSCode API の型定義
 interface VsCodeApi {
-  postMessage: (message: any) => void;
-  getState: () => any;
-  setState: (state: any) => void;
+  postMessage: (message: unknown) => void;
+  getState: () => unknown;
+  setState: (state: unknown) => void;
 }
 
 // グローバル変数の拡張
@@ -40,9 +40,10 @@ function getVsCodeApi(): VsCodeApi {
   // フォールバック: モック API を作成
   console.warn("⚠️  Running outside VSCode environment, using mock API");
   window.vscodeApi = {
-    postMessage: (message: any) => console.log("📤 Mock postMessage:", message),
+    postMessage: (message: unknown) =>
+      console.log("📤 Mock postMessage:", message),
     getState: () => undefined,
-    setState: (_: any) => {},
+    setState: (_: unknown) => {},
   };
 
   return window.vscodeApi;

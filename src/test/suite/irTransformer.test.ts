@@ -1,11 +1,11 @@
 import { expect } from "chai";
-import { IRTransformer } from "../../core/transformer/IRTransformer";
-import type { AST } from "../../core/parser/AST";
 import type {
-  IRStartNode,
-  IRProcessNode,
   IRControlFlowNode,
+  IRProcessNode,
+  IRStartNode,
 } from "../../core/ir/IR";
+import type { AST } from "../../core/parser/AST";
+import { IRTransformer } from "../../core/transformer/IRTransformer";
 
 describe("IRTransformer", () => {
   let transformer: IRTransformer;

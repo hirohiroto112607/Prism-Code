@@ -2,10 +2,10 @@
  * 他のAIツール向けにプロジェクト情報をエクスポート
  */
 
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import type { IndexManager } from "./IndexManager";
-import { type ProjectIndex, type AIToolContext, ModuleGroup } from "./types";
+import type { AIToolContext, ProjectIndex } from "./types";
 
 export class Exporter {
   private indexManager: IndexManager;
@@ -51,7 +51,7 @@ export class Exporter {
       return;
     }
 
-    const markdown = this.generateProjectMarkdown(projectIndex);
+    const markdown = await this.generateProjectMarkdown(projectIndex);
 
     const outputPath = path.join(
       this.workspaceRoot,
@@ -68,7 +68,9 @@ export class Exporter {
   /**
    * プロジェクト構造のMarkdownを生成
    */
-  private generateProjectMarkdown(projectIndex: ProjectIndex): string {
+  private async generateProjectMarkdown(
+    projectIndex: ProjectIndex,
+  ): Promise<string> {
     const { metadata } = projectIndex;
 
     let md = `# ${projectIndex.projectName}\n\n`;
@@ -118,14 +120,14 @@ export class Exporter {
     }
 
     // AIサマリー
-    const aiSummaries = this.indexManager.loadAISummaries();
+    const aiSummaries = await this.indexManager.loadAISummaries();
     if (aiSummaries) {
       md += `## 🤖 AI生成サマリー\n\n`;
-      md += `**生成モデル**: ${(aiSummaries as any).model}\n\n`;
+      md += `**生成モデル**: ${aiSummaries.model}\n\n`;
 
-      if ((aiSummaries as any).projectSummary) {
+      if (aiSummaries.projectSummary) {
         md += `### プロジェクト全体\n\n`;
-        md += `${(aiSummaries as any).projectSummary}\n\n`;
+        md += `${aiSummaries.projectSummary}\n\n`;
       }
     }
 
@@ -155,10 +157,10 @@ export class Exporter {
     rules += `\`\`\`\n${context.projectStructure}\`\`\`\n\n`;
 
     rules += `## 主要言語\n\n`;
-    rules += context.overview.mainLanguages.join(", ") + "\n\n";
+    rules += `${context.overview.mainLanguages.join(", ")}\n\n`;
 
     rules += `## アーキテクチャ\n\n`;
-    rules += context.overview.architecture + "\n\n";
+    rules += `${context.overview.architecture}\n\n`;
 
     rules += `## 重要なファイル\n\n`;
     for (const file of context.importantFiles) {
@@ -282,7 +284,7 @@ export class Exporter {
       projectStructure: projectTree,
       overview: {
         description:
-          (aiSummaries as any)?.projectSummary ||
+          aiSummaries?.projectSummary ||
           `${projectIndex.projectName}は${projectIndex.metadata.languages.join(
             "/",
           )}で書かれたプロジェクトです。`,
@@ -318,7 +320,7 @@ export class Exporter {
 
     for (const dir of sortedDirs) {
       const indent = dir === "." ? "" : "  ".repeat(dir.split("/").length);
-      const dirName = dir === "." ? "" : path.basename(dir) + "/";
+      const dirName = dir === "." ? "" : `${path.basename(dir)}/`;
 
       if (dirName) {
         treeStr += `${indent}${dirName}\n`;
@@ -348,7 +350,7 @@ export class Exporter {
         production: Object.keys(packageJson.dependencies || {}),
         development: Object.keys(packageJson.devDependencies || {}),
       };
-    } catch (error) {
+    } catch (_error) {
       return { production: [], development: [] };
     }
   }

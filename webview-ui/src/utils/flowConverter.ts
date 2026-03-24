@@ -1,6 +1,6 @@
-import { type Node, type Edge, MarkerType } from "reactflow";
-import type { IR, IRNode } from "../types/ir";
 import ELK from "elkjs/lib/elk.bundled.js";
+import { type Edge, MarkerType, type Node } from "reactflow";
+import type { IR, IRNode } from "../types/ir";
 
 const elk = new ELK();
 
@@ -130,9 +130,16 @@ function convertNodeToReactFlow(irNode: IRNode): Node {
 
 /**
  * ELK.jsを使用してレイアウトを計算
+ *
+ * バックエッジ（ループ戻り "ループ"ラベル）はELKに渡さない。
+ * ELKに渡すと循環グラフと判断され、ノードが意図しない位置に配置されるため。
+ * バックエッジは React Flow で視覚的には描画されるが、レイアウト計算には使わない。
  */
 async function calculateLayout(nodes: Node[], edges: Edge[]): Promise<Node[]> {
   if (nodes.length === 0) return nodes;
+
+  // バックエッジ（ループ戻り）をレイアウト計算から除外
+  const layoutEdges = edges.filter((e) => e.label !== "ループ");
 
   const elkGraph = {
     id: "root",
@@ -147,7 +154,7 @@ async function calculateLayout(nodes: Node[], edges: Edge[]): Promise<Node[]> {
       const { width, height } = getNodeSize(node.type);
       return { id: node.id, width, height };
     }),
-    edges: edges.map((edge) => ({
+    edges: layoutEdges.map((edge) => ({
       id: edge.id,
       sources: [edge.source],
       targets: [edge.target],

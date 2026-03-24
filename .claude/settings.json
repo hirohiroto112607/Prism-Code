@@ -1,6 +1,6 @@
 {
   "permissions": {
-    "allow": ["Bash(* --version)", "Bash(* --help *)"],
+    "allow": ["Bash(* --version)", "Bash(* --help *)", "Bash(pnpm biome:*)"],
     "deny": ["Bash(git push *)"]
   }
 }

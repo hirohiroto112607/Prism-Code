@@ -1,22 +1,22 @@
-import { useCallback, useMemo, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import ReactFlow, {
-  Controls,
   Background,
+  BackgroundVariant,
+  Controls,
+  type Edge,
   MiniMap,
   type Node,
-  type Edge,
-  useNodesState,
-  useEdgesState,
-  BackgroundVariant,
   Panel,
+  useEdgesState,
+  useNodesState,
 } from "reactflow";
 import "reactflow/dist/style.css";
 import { vscode } from "../vscode-api";
-import { StartNode } from "./nodes/StartNode";
 import { EndNode } from "./nodes/EndNode";
-import { ProcessNode } from "./nodes/ProcessNode";
 import { IfNode } from "./nodes/IfNode";
 import { LoopNode } from "./nodes/LoopNode";
+import { ProcessNode } from "./nodes/ProcessNode";
+import { StartNode } from "./nodes/StartNode";
 
 interface FlowChartProps {
   nodes: Node[];
@@ -137,6 +137,7 @@ export function FlowChart({
               ビュー切替
             </div>
             <button
+              type="button"
               onClick={switchToMacroView}
               style={{
                 padding: "8px 16px",
@@ -153,6 +154,7 @@ export function FlowChart({
               🔭 マクロビュー
             </button>
             <button
+              type="button"
               onClick={switchToOverviewView}
               style={{
                 padding: "8px 16px",

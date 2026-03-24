@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import type { IR } from "../core/ir/IR";
 import type { ProjectMacroViewData } from "../core/index/types";
+import type { DiagramType, IR } from "../core/ir/IR";
 
 /**
  * エディタエリアにフローチャートを表示するWebviewPanel
@@ -12,7 +12,7 @@ export class FlowChartPanel {
   private readonly _panel: vscode.WebviewPanel;
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
-  private _currentViewMode: "micro" | "macro" = "micro";
+  private _onDiagramTypeChange?: (diagramType: DiagramType) => void;
 
   /**
    * FlowChartPanelを作成または既存のものを表示
@@ -61,11 +61,27 @@ export class FlowChartPanel {
           case "alert":
             vscode.window.showInformationMessage(message.text);
             break;
+          case "changeDiagramType":
+            if (this._onDiagramTypeChange && message.data?.diagramType) {
+              this._onDiagramTypeChange(
+                message.data.diagramType as DiagramType,
+              );
+            }
+            break;
         }
       },
       null,
       this._disposables,
     );
+  }
+
+  /**
+   * テンプレート切り替え時のコールバックを登録する
+   */
+  public onDiagramTypeChange(
+    callback: (diagramType: DiagramType) => void,
+  ): void {
+    this._onDiagramTypeChange = callback;
   }
 
   /**
@@ -76,7 +92,7 @@ export class FlowChartPanel {
       nodes: ir.nodes.length,
       edges: ir.edges.length,
     });
-    this._currentViewMode = "micro";
+    this.currentViewMode = "micro";
     this._panel.webview.postMessage({
       type: "updateFlow",
       data: ir,
@@ -93,7 +109,7 @@ export class FlowChartPanel {
       "FlowChartPanel.updateProjectMacroView called with data:",
       projectMacroData,
     );
-    this._currentViewMode = "macro";
+    this.currentViewMode = "macro";
     this._panel.webview.postMessage({
       type: "updateMacroView",
       data: projectMacroData,

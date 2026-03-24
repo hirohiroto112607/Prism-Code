@@ -4,7 +4,7 @@
   "description": "コードを視覚化するVSCode拡張機能",
   "version": "0.0.1",
   "engines": {
-    "vscode": "^1.85.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Visualization",
@@ -78,17 +78,29 @@
     "configuration": {
       "title": "Prism Code",
       "properties": {
+        "prismcode.aiProvider": {
+          "type": "string",
+          "default": "auto",
+          "enum": [
+            "auto",
+            "copilot",
+            "gemini",
+            "none"
+          ],
+          "enumDescriptions": [
+            "GitHub Copilotを優先し、利用できない場合はGemini APIを試みます（推奨）",
+            "GitHub Copilot Language Model APIのみを使用します（Copilot要インストール・APIキー不要）",
+            "Gemini APIのみを使用します（prismcode.geminiApiKeyの設定が必要）",
+            "AIを使用せず、ts-morphによる静的解析のみを使用します"
+          ],
+          "description": "コード解析に使用するAIプロバイダー。\"auto\" は Copilot → Gemini の優先順で自動選択します。",
+          "scope": "resource"
+        },
         "prismcode.geminiApiKey": {
           "type": "string",
           "default": "",
-          "description": "Gemini APIキー（Google AI Studio: https://aistudio.google.com/apikey で取得）",
+          "description": "Gemini APIキー（Google AI Studio で取得）。aiProvider が \"gemini\" または \"auto\" の場合に使用されます。",
           "scope": "application"
-        },
-        "prismcode.useGeminiAnalysis": {
-          "type": "boolean",
-          "default": false,
-          "description": "trueの場合、ts-morphの代わりにGemini APIでコードを解析します（APIキーが必要）",
-          "scope": "resource"
         },
         "prismcode.geminiModel": {
           "type": "string",
@@ -107,6 +119,13 @@
           ],
           "description": "使用するGeminiモデル。無料枠の場合は gemini-2.0-flash-lite を選択してください。",
           "scope": "resource"
+        },
+        "prismcode.useGeminiAnalysis": {
+          "type": "boolean",
+          "default": false,
+          "description": "【非推奨】prismcode.aiProvider を使用してください。後方互換性のために残されています。",
+          "scope": "resource",
+          "markdownDeprecationMessage": "`prismcode.aiProvider` を使用してください。`\"gemini\"` に設定することで同等の動作になります。"
         }
       }
     }
@@ -123,14 +142,14 @@
     "test:unit": "mocha --config .mocharc.json",
     "test:webview": "pnpm --dir webview-ui test",
     "test:all": "pnpm test && pnpm test:webview",
-    "lint": "eslint src --ext ts"
+    "check": "biome check --fix"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
     "@types/glob": "^9.0.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "^20.0.0",
-    "@types/vscode": "^1.85.0",
+    "@types/vscode": "^1.110.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "@vscode/test-electron": "^2.5.2",

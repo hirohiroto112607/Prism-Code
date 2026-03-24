@@ -1,6 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { convertIRToReactFlow } from "../utils/flowConverter";
+import { describe, expect, it } from "vitest";
 import type { IR } from "../types/ir";
+import { convertIRToReactFlow } from "../utils/flowConverter";
 
 describe("flowConverter", () => {
   describe("convertIRToReactFlow", () => {

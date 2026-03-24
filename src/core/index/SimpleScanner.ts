@@ -3,8 +3,8 @@
  * vscode.workspace.findFiles を使わずに、Node.jsのfsモジュールで直接ファイルを検索
  */
 
-import * as fs from "fs/promises";
-import * as path from "path";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 
 export class SimpleScanner {
   /**
@@ -197,7 +197,7 @@ export class SimpleScanner {
     // 単純なワイルドカード（例: *.min.js）
     if (pattern.includes("*")) {
       const regex = new RegExp(
-        "^" + pattern.replace(/\*/g, ".*").replace(/\?/g, ".") + "$",
+        `^${pattern.replace(/\*/g, ".*").replace(/\?/g, ".")}$`,
       );
       return regex.test(name) || regex.test(relativePath);
     }

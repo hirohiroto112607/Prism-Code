@@ -30,7 +30,8 @@ Prism Codeは、**TypeScript/JavaScriptコードをインタラクティブな�
 - **双方向性**: コードとビジュアルの相互変換（将来的にフローチャート→コード生成も実装予定）
 - **疎結合設計**: 言語非依存のIR（中間表現）を採用し、将来的に複数言語に対応可能
 - **インタラクティブ性**: React Flowによる自由なズーム・パン操作
-- **AI統合準備**: Phase 3でGemini APIを統合し、自然言語からのフローチャート生成を実現予定
+- **AI統合**: GitHub Copilot（VS Code Language Model API）と Gemini API の両方をサポート。Copilot を優先し、利用できない場合は Gemini にフォールバックする自動選択機構を持つ
+- **チャット機能**: サイドバーから Copilot を使って現在のファイルについて質問可能
 
 ### 1.3 主要機能（現在実装済み）
 
@@ -39,8 +40,12 @@ Prism Codeは、**TypeScript/JavaScriptコードをインタラクティブな�
 - ✅ IR（中間表現）への変換
 - ✅ React Flowによるインタラクティブなフローチャート表示
 - ✅ カスタムノード（開始/終了/プロセス/判定/ループ）
-- ✅ Dagreによる自動レイアウト
+- ✅ ELK.jsによる自動レイアウト
 - ✅ サイドバーからワンクリックで可視化
+- ✅ GitHub Copilot Language Model API によるAI解析（APIキー不要）
+- ✅ Gemini API によるAI解析（フォールバック）
+- ✅ AI プロバイダーの自動選択（Copilot → Gemini → ts-morph）
+- ✅ サイドバーAIチャット（Copilot で現在のファイルについて質問可能）
 
 ---
 
@@ -54,6 +59,15 @@ Prism Code/
 │
 ├── src/                          # Extension側（Node.js）
 │   ├── core/                     # コアロジック（言語非依存）
+│   │   ├── ai/
+│   │   │   ├── IRPromptBuilder.ts    # プロンプト構築・レスポンス解析（共有）
+│   │   │   ├── CopilotAnalyzer.ts    # GitHub Copilot LM API 統合
+│   │   │   ├── GeminiAnalyzer.ts     # Gemini API 統合
+│   │   │   └── AIAnalyzerFactory.ts  # AIプロバイダー自動選択ファクトリー
+│   │   ├── cache/
+│   │   │   └── CacheManager.ts   # キャッシュ管理
+│   │   ├── index/
+│   │   │   └── ...               # プロジェクトインデックス管理
 │   │   ├── parser/
 │   │   │   ├── IParser.ts        # パーサーインターフェース（疎結合の要）
 │   │   │   └── AST.ts            # AST型定義
@@ -63,7 +77,7 @@ Prism Code/
 │   │   │   └── IRTransformer.ts  # AST → IR 変換ロジック
 │   │   └── visualization/
 │   │       ├── IVisualizationTemplate.ts  # テンプレートインターフェース
-│   │       └── VisualizationSelector.ts   # AI/ルールベース選択ロジック
+│   │       └── VisualizationSelector.ts   # ルールベース選択ロジック
 │   │
 │   ├── parsers/                  # 言語別パーサー実装
 │   │   ├── typescript/
@@ -71,7 +85,9 @@ Prism Code/
 │   │   └── ParserFactory.ts      # パーサー選択（Factory Pattern）
 │   │
 │   ├── webview/
-│   │   └── WebViewProvider.ts    # WebView管理・メッセージング
+│   │   ├── FlowChartPanel.ts     # フローチャートパネル（メインUI）
+│   │   ├── AIChatViewProvider.ts # サイドバーAIチャット
+│   │   └── WebViewProvider.ts    # （レガシー）
 │   │
 │   └── extension.ts              # 拡張機能エントリーポイント
 │
@@ -122,6 +138,8 @@ Prism Code/
 | **TypeScript** | 型安全なコード記述 | 大規模プロジェクトでのメンテナンス性向上 |
 | **ts-morph** | TypeScript/JavaScriptパーサー | TypeScript Compiler APIのラッパー、使いやすい |
 | **VSCode Extension API** | VSCode統合 | 公式API |
+| **VS Code Language Model API** | GitHub Copilot連携 | `vscode.lm` 経由でCopilotモデルを呼び出す（VSCode 1.90+）|
+| **Gemini API** | フォールバックAI解析 | Copilot未使用ユーザー向け（要APIキー） |
 
 ### 3.2 WebView UI側（ブラウザ環境）
 
@@ -130,7 +148,7 @@ Prism Code/
 | **React** | UI構築 | コンポーネント指向、豊富なエコシステム |
 | **React Flow** | フローチャート描画 | インタラクティブなノード・エッジ操作が可能 |
 | **Vite** | ビルドツール | 高速な開発サーバー、最適化されたビルド |
-| **Dagre** | レイアウト計算 | グラフの自動配置アルゴリズム |
+| **ELK.js** | レイアウト計算 | グラフの自動配置アルゴリズム（Dagreより高品質） |
 
 ### 3.3 設計思想
 
@@ -177,11 +195,14 @@ Prism Code/
 │  ┌──────────────────────────────────────────────────┐  │
 │  │  1. visualizeCommand.execute()                    │  │
 │  │     ↓                                             │  │
-│  │  2. TypeScriptParser.parse(code)                  │  │
+│  │  2. AIAnalyzerFactory.analyzeCode()               │  │
+│  │     ├─ CopilotAnalyzer（vscode.lm API）優先       │  │
+│  │     ├─ GeminiAnalyzer（APIキーある場合）          │  │
+│  │     └─ null（ts-morph + CacheManager へ）        │  │
 │  │     ↓                                             │  │
-│  │  3. IRTransformer.transform(ast)                  │  │
+│  │  3. IRTransformer.transform(ast)（フォールバック）│  │
 │  │     ↓                                             │  │
-│  │  4. WebViewProvider.sendFlowData(ir)              │  │
+│  │  4. FlowChartPanel.updateFlowChart(ir)            │  │
 │  └──────────────────────────────────────────────────┘  │
 └────────────────────────┬───────────────────────────────┘
                          │ postMessage({ type: 'updateFlow', data: ir })
@@ -287,7 +308,7 @@ React Flow Data
       edges: [...]
     }
     ↓
-[Dagre Layout Algorithm]
+[ELK.js Layout Algorithm]
     ↓ ノードの位置を自動計算
 Positioned React Flow Data
     ↓
@@ -558,7 +579,51 @@ if (irResult.hit) {
 └── config.json                         # キャッシュ設定
 ```
 
-### 6.5 WebViewProvider
+### 6.5 AI統合レイヤー
+
+**構成ファイル**:
+
+| ファイル | 役割 |
+|---------|------|
+| `IRPromptBuilder.ts` | プロンプト構築・レスポンスのパース（両Analyzerで共有） |
+| `CopilotAnalyzer.ts` | VS Code Language Model API (`vscode.lm`) 経由でCopilotを呼び出す |
+| `GeminiAnalyzer.ts` | Gemini REST API を呼び出す（APIキー必要） |
+| `AIAnalyzerFactory.ts` | 設定に基づき適切なアナライザーを選択するファクトリー |
+
+**優先順位（`aiProvider: "auto"` の場合）**:
+
+```
+1. CopilotAnalyzer  ← GitHub Copilot 拡張機能がインストール済みなら使用
+2. GeminiAnalyzer   ← geminiApiKey が設定されていれば使用
+3. null             ← ts-morph + CacheManager へフォールバック
+```
+
+**CopilotAnalyzer の特徴**:
+
+```typescript
+// APIキー不要 - ユーザーの既存 Copilot サブスクリプションを利用
+const analyzer = await CopilotAnalyzer.create();
+const ir = await analyzer.analyzeCode(code, filePath);
+
+// チャット機能 - 現在のファイルについて質問可能
+const answer = await analyzer.chat("この関数の役割は？", code, filePath);
+```
+
+**VSCode 設定**:
+
+```json
+{
+  "prismcode.aiProvider": "auto",      // "auto" | "copilot" | "gemini" | "none"
+  "prismcode.geminiApiKey": "...",     // Gemini使用時のみ必要
+  "prismcode.geminiModel": "gemini-2.0-flash-lite"
+}
+```
+
+**必要なVSCodeバージョン**: 1.90+（`vscode.lm` API）
+
+---
+
+### 6.6 WebViewProvider
 
 **役割**: ExtensionとWebView間の通信を管理
 

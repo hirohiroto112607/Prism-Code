@@ -1,8 +1,9 @@
 import * as vscode from "vscode";
+import { AIAnalyzerFactory } from "../core/ai/AIAnalyzerFactory";
+import { CopilotAnalyzer } from "../core/ai/CopilotAnalyzer";
 
 /**
- * サイドバーにAIチャット用のUIを表示するWebViewProvider
- * Phase 3でGemini API統合予定
+ * サイドバーにAIアシスタントUIを表示するWebViewProvider
  */
 export class AIChatViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = "prismcode.aiChat";
@@ -29,11 +30,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
     // WebViewからのメッセージを受信
-    webviewView.webview.onDidReceiveMessage((message) => {
+    webviewView.webview.onDidReceiveMessage(async (message) => {
       switch (message.type) {
         case "sendMessage":
-          // TODO: Phase 3でGemini APIと統合
-          this._handleUserMessage(message.text);
+          await this._handleUserMessage(message.text);
           break;
         case "visualize":
           vscode.commands.executeCommand("prismcode.visualize");
@@ -50,22 +50,83 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         case "exportAI":
           vscode.commands.executeCommand("prismcode.exportForAITools");
           break;
+        case "checkAIProvider":
+          await this._sendAIProviderStatus();
+          break;
+        case "openSettings":
+          vscode.commands.executeCommand(
+            "workbench.action.openSettings",
+            "prismcode.aiProvider",
+          );
+          break;
       }
+    });
+
+    // WebView表示時にAIプロバイダーの状態を送信
+    this._sendAIProviderStatus();
+  }
+
+  /**
+   * AIプロバイダーの状態を WebView に送信する
+   */
+  private async _sendAIProviderStatus(): Promise<void> {
+    const config = vscode.workspace.getConfiguration("prismcode");
+    const { label, detail } =
+      await AIAnalyzerFactory.getActiveProviderLabel(config);
+
+    const copilotAvailable = await AIAnalyzerFactory.isCopilotAvailable();
+
+    this._view?.webview.postMessage({
+      type: "aiProviderStatus",
+      label,
+      detail,
+      copilotAvailable,
     });
   }
 
   /**
-   * ユーザーメッセージを処理（Phase 3で実装）
+   * ユーザーメッセージを処理して Copilot（または Gemini）で回答する
    */
-  private _handleUserMessage(text: string): void {
-    // TODO: Gemini APIにリクエストを送信
-    // 現在はダミーレスポンスを返す
-    setTimeout(() => {
+  private async _handleUserMessage(text: string): Promise<void> {
+    // 処理中インジケーターを送信
+    this._view?.webview.postMessage({
+      type: "aiResponse",
+      text: "...",
+      isThinking: true,
+    });
+
+    try {
+      // 現在のエディタのコードをコンテキストとして提供
+      const editor = vscode.window.activeTextEditor;
+      const contextCode = editor?.document.getText();
+      const contextFilePath = editor?.document.fileName;
+
+      let responseText: string;
+
+      // Copilot が利用可能なら優先して使用
+      const copilotAvailable = await AIAnalyzerFactory.isCopilotAvailable();
+      if (copilotAvailable) {
+        const analyzer = await CopilotAnalyzer.create();
+        responseText = await analyzer.chat(text, contextCode, contextFilePath);
+      } else {
+        // フォールバック: Copilot なし
+        responseText =
+          "GitHub Copilotが利用できないため、チャット機能は現在使用できません。\n" +
+          "設定で `prismcode.aiProvider` を確認してください。";
+      }
+
       this._view?.webview.postMessage({
         type: "aiResponse",
-        text: `[開発中] あなたのメッセージ: "${text}"`,
+        text: responseText,
+        isThinking: false,
       });
-    }, 500);
+    } catch (err: any) {
+      this._view?.webview.postMessage({
+        type: "aiResponse",
+        text: `エラーが発生しました: ${err.message}`,
+        isThinking: false,
+      });
+    }
   }
 
   /**
@@ -110,7 +171,57 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         font-size: 11px;
         opacity: 0.7;
       }
-      
+
+      /* AI Provider Status */
+      .ai-status {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 10px;
+        border-radius: 4px;
+        background: var(--vscode-editor-background);
+        border: 1px solid var(--vscode-panel-border);
+        margin-bottom: 12px;
+        cursor: pointer;
+        transition: background 0.1s;
+        flex-shrink: 0;
+      }
+      .ai-status:hover {
+        background: var(--vscode-list-hoverBackground);
+      }
+      .ai-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+      .ai-status-dot.copilot { background: #58a6ff; }
+      .ai-status-dot.gemini  { background: #4ade80; }
+      .ai-status-dot.offline { background: #6b7280; }
+      .ai-status-text {
+        flex: 1;
+        min-width: 0;
+      }
+      .ai-status-label {
+        font-size: 11px;
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ai-status-detail {
+        font-size: 10px;
+        opacity: 0.6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .ai-status-refresh {
+        font-size: 12px;
+        opacity: 0.5;
+        flex-shrink: 0;
+      }
+
       .scroll-area {
         flex: 1;
         overflow-y: auto;
@@ -144,7 +255,6 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         flex-direction: column;
         gap: 6px;
       }
-      
       .action-button {
         display: flex;
         flex-direction: column;
@@ -190,7 +300,7 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         display: flex;
         flex-direction: column;
         margin-top: 10px;
-        max-height: 250px;
+        max-height: 260px;
         flex-shrink: 0;
       }
       .chat-messages {
@@ -203,16 +313,21 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         margin-bottom: 8px;
         padding: 6px 10px;
         border-radius: 4px;
-        line-height: 1.4;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        word-break: break-word;
       }
       .message.ai {
         background: var(--vscode-editor-background);
         border: 1px solid var(--vscode-panel-border);
       }
+      .message.ai.thinking {
+        opacity: 0.6;
+        font-style: italic;
+      }
       .message.user {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
-        align-self: flex-end;
       }
 
       .input-wrapper {
@@ -230,6 +345,10 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         border-radius: 2px;
         font-size: 12px;
       }
+      input:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
       .send-btn {
         background: var(--vscode-button-background);
         color: var(--vscode-button-foreground);
@@ -239,9 +358,8 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
         cursor: pointer;
         font-size: 12px;
       }
-      .send-btn:hover {
-        background: var(--vscode-button-hoverBackground);
-      }
+      .send-btn:hover { background: var(--vscode-button-hoverBackground); }
+      .send-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
   </head>
   <body>
@@ -249,6 +367,16 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       <div class="header">
         <div class="title">PRISM CODE</div>
         <div class="description">コード構造を可視化し、理解を深めます。</div>
+      </div>
+
+      <!-- AI Provider Status -->
+      <div class="ai-status" id="aiStatus" title="クリックして設定を開く">
+        <div class="ai-status-dot offline" id="aiStatusDot"></div>
+        <div class="ai-status-text">
+          <div class="ai-status-label" id="aiStatusLabel">AI プロバイダーを確認中...</div>
+          <div class="ai-status-detail" id="aiStatusDetail"></div>
+        </div>
+        <div class="ai-status-refresh">⟳</div>
       </div>
 
       <div class="scroll-area">
@@ -310,11 +438,11 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       </div>
 
       <!-- Chat Section (Fixed at bottom) -->
-      <div class="section-title">💬 AI Assistant (Beta)</div>
+      <div class="section-title">💬 AI Chat</div>
       <div class="chat-section">
         <div class="chat-messages" id="chatMessages">
-          <div class="message ai">
-            こんにちは！コードの可視化や構造について何かお手伝いできることはありますか？
+          <div class="message ai" id="welcomeMsg">
+            Copilotが利用可能な場合、現在のファイルについて質問できます。
           </div>
         </div>
         <div class="input-wrapper">
@@ -329,39 +457,59 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
       const chatMessages = document.getElementById('chatMessages');
       const messageInput = document.getElementById('messageInput');
       const sendButton = document.getElementById('sendButton');
-      
-      // Buttons
-      const visualizeButton = document.getElementById('visualizeButton');
-      const macroButton = document.getElementById('macroButton');
-      const generateIndexButton = document.getElementById('generateIndexButton');
-      const loadCachedButton = document.getElementById('loadCachedButton');
-      const exportAIButton = document.getElementById('exportAIButton');
+      const aiStatus = document.getElementById('aiStatus');
+      const aiStatusDot = document.getElementById('aiStatusDot');
+      const aiStatusLabel = document.getElementById('aiStatusLabel');
+      const aiStatusDetail = document.getElementById('aiStatusDetail');
+      const welcomeMsg = document.getElementById('welcomeMsg');
 
-      // Functions
+      let isThinking = false;
+      let thinkingMsgEl = null;
+
+      // Buttons
+      document.getElementById('visualizeButton').addEventListener('click', () => vscode.postMessage({ type: 'visualize' }));
+      document.getElementById('macroButton').addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
+      document.getElementById('generateIndexButton').addEventListener('click', () => vscode.postMessage({ type: 'generateIndex' }));
+      document.getElementById('loadCachedButton').addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
+      document.getElementById('exportAIButton').addEventListener('click', () => vscode.postMessage({ type: 'exportAI' }));
+
+      // AI Status クリックで設定を開く
+      aiStatus.addEventListener('click', () => {
+        vscode.postMessage({ type: 'openSettings' });
+      });
+      // ⟳ ホバーでリフレッシュ
+      aiStatus.addEventListener('dblclick', () => {
+        vscode.postMessage({ type: 'checkAIProvider' });
+      });
+
       function sendMessage() {
         const text = messageInput.value.trim();
-        if (!text) return;
+        if (!text || isThinking) return;
+
         addMessage(text, 'user');
         vscode.postMessage({ type: 'sendMessage', text });
         messageInput.value = '';
+
+        isThinking = true;
+        messageInput.disabled = true;
+        sendButton.disabled = true;
       }
 
-      function addMessage(text, sender) {
+      function addMessage(text, sender, isThinkingMsg = false) {
+        if (welcomeMsg && welcomeMsg.parentNode) {
+          welcomeMsg.parentNode.removeChild(welcomeMsg);
+        }
+
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message ' + sender;
-        messageDiv.textContent = text;
+        messageDiv.className = 'message ' + sender + (isThinkingMsg ? ' thinking' : '');
+        messageDiv.textContent = isThinkingMsg ? '考え中...' : text;
         chatMessages.appendChild(messageDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        if (isThinkingMsg) thinkingMsgEl = messageDiv;
+        return messageDiv;
       }
 
-      // Event Listeners for Commands
-      visualizeButton.addEventListener('click', () => vscode.postMessage({ type: 'visualize' }));
-      macroButton.addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
-      generateIndexButton.addEventListener('click', () => vscode.postMessage({ type: 'generateIndex' }));
-      loadCachedButton.addEventListener('click', () => vscode.postMessage({ type: 'loadCachedMacro' }));
-      exportAIButton.addEventListener('click', () => vscode.postMessage({ type: 'exportAI' }));
-
-      // Chat events
       sendButton.addEventListener('click', sendMessage);
       messageInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') sendMessage();
@@ -369,10 +517,43 @@ export class AIChatViewProvider implements vscode.WebviewViewProvider {
 
       window.addEventListener('message', (event) => {
         const message = event.data;
+
         if (message.type === 'aiResponse') {
-          addMessage(message.text, 'ai');
+          // 考え中メッセージを削除
+          if (thinkingMsgEl) {
+            thinkingMsgEl.parentNode && thinkingMsgEl.parentNode.removeChild(thinkingMsgEl);
+            thinkingMsgEl = null;
+          }
+
+          if (!message.isThinking) {
+            addMessage(message.text, 'ai');
+            isThinking = false;
+            messageInput.disabled = false;
+            sendButton.disabled = false;
+            messageInput.focus();
+          } else {
+            addMessage('', 'ai', true);
+          }
+        }
+
+        if (message.type === 'aiProviderStatus') {
+          aiStatusLabel.textContent = message.label;
+          aiStatusDetail.textContent = message.detail;
+
+          // ドットの色を更新
+          aiStatusDot.className = 'ai-status-dot ';
+          if (message.copilotAvailable) {
+            aiStatusDot.className += 'copilot';
+          } else if (message.label.includes('Gemini')) {
+            aiStatusDot.className += 'gemini';
+          } else {
+            aiStatusDot.className += 'offline';
+          }
         }
       });
+
+      // 初期状態でAIプロバイダーを確認
+      vscode.postMessage({ type: 'checkAIProvider' });
     </script>
   </body>
 </html>`;

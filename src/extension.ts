@@ -1,12 +1,16 @@
 import * as vscode from "vscode";
-import { FlowChartPanel } from "./webview/FlowChartPanel";
-import { AIChatViewProvider } from "./webview/AIChatViewProvider";
+import {
+  AIAnalyzerFactory,
+  GeminiQuotaError,
+} from "./core/ai/AIAnalyzerFactory";
+import { CopilotUnavailableError } from "./core/ai/CopilotAnalyzer";
+import { CacheManager } from "./core/cache/CacheManager";
+import { Exporter } from "./core/index/Exporter";
 import { IndexManager } from "./core/index/IndexManager";
 import { ProjectScanner } from "./core/index/ProjectScanner";
-import { Exporter } from "./core/index/Exporter";
-import { CacheManager } from "./core/cache/CacheManager";
-import { GeminiAnalyzer, GeminiQuotaError } from "./core/ai/GeminiAnalyzer";
-import type { IR } from "./core/ir/IR";
+import { VisualizationSelector } from "./core/visualization/VisualizationSelector";
+import { AIChatViewProvider } from "./webview/AIChatViewProvider";
+import { FlowChartPanel } from "./webview/FlowChartPanel";
 
 /**
  * ファイル変更監視を設定
@@ -58,21 +62,23 @@ export function activate(context: vscode.ExtensionContext) {
 
   if (workspaceFolder) {
     indexManager = new IndexManager(workspaceFolder.uri.fsPath);
-    // .prismcodeフォルダーを初期化（非同期）
-    indexManager.initialize().catch((error) => {
-      console.error(".prismcode初期化エラー:", error);
-    });
-
     // CacheManagerを初期化
     cacheManager = new CacheManager(indexManager);
     console.log("✅ CacheManager初期化完了");
 
-    // ファイル変更監視の設定
-    const config = indexManager.getConfig();
-    if (config?.autoUpdate) {
-      setupFileWatcher(cacheManager, context);
-      console.log("✅ ファイル監視を有効化（自動キャッシュ無効化）");
-    }
+    // .prismcodeフォルダーを初期化（非同期）、完了後にファイル監視を設定
+    indexManager
+      .initialize()
+      .then(() => {
+        const config = indexManager?.getConfig();
+        if (config?.autoUpdate) {
+          setupFileWatcher(cacheManager!, context);
+          console.log("✅ ファイル監視を有効化（自動キャッシュ無効化）");
+        }
+      })
+      .catch((error) => {
+        console.error(".prismcode初期化エラー:", error);
+      });
   }
 
   // サイドバーにAIチャットビューを登録
@@ -83,6 +89,84 @@ export function activate(context: vscode.ExtensionContext) {
       aiChatProvider,
     ),
   );
+
+  // タブ切り替え時の再解析に必要な最終解析情報
+  let lastAnalyzedCode = "";
+  let lastAnalyzedFilePath = "";
+
+  /**
+   * コードを解析してフローチャートパネルを更新する共通処理
+   */
+  async function analyzeAndUpdatePanel(
+    code: string,
+    filePath: string,
+    requestedDiagramType?: import("./core/ir/IR").DiagramType,
+  ): Promise<void> {
+    const config = vscode.workspace.getConfiguration("prismcode");
+    let ir: import("./core/ir/IR").IR;
+    let analysisMethod = "";
+
+    const aiResult = await AIAnalyzerFactory.analyzeCode(
+      code,
+      filePath,
+      config,
+      requestedDiagramType,
+    );
+
+    if (aiResult) {
+      ir = aiResult.ir;
+      analysisMethod =
+        aiResult.provider === "copilot"
+          ? `（GitHub Copilot: ${aiResult.modelInfo}）`
+          : `（Gemini: ${aiResult.modelInfo}）`;
+    } else {
+      if (!cacheManager) {
+        vscode.window.showErrorMessage("CacheManagerが初期化されていません");
+        return;
+      }
+
+      const irResult = await cacheManager.getIR(filePath, code);
+      ir = irResult.data!;
+
+      const selector = new VisualizationSelector();
+      const target = requestedDiagramType ?? selector.selectByRules(code).type;
+      ir.metadata.diagramType = target;
+      ir.metadata.aiReason = requestedDiagramType
+        ? `ユーザーが手動で選択したテンプレート`
+        : `${selector.selectByRules(code).reason}（静的ルール）`;
+    }
+
+    if (ir.nodes.length === 0) {
+      vscode.window.showWarningMessage(
+        "可視化できる関数定義が見つかりませんでした。",
+      );
+      return;
+    }
+
+    const panel = FlowChartPanel.createOrShow(context.extensionUri);
+
+    // タブ切り替え時の再解析コールバックを登録
+    panel.onDiagramTypeChange(async (diagramType) => {
+      try {
+        vscode.window.showInformationMessage(`🔄 ${diagramType} で再解析中...`);
+        await analyzeAndUpdatePanel(
+          lastAnalyzedCode,
+          lastAnalyzedFilePath,
+          diagramType,
+        );
+      } catch (error: any) {
+        vscode.window.showErrorMessage(`再解析エラー: ${error.message}`);
+      }
+    });
+
+    panel.updateFlowChart(ir);
+
+    if (analysisMethod) {
+      vscode.window.showInformationMessage(
+        `フローチャートを生成しました${analysisMethod}（ノード: ${ir.nodes.length}個）`,
+      );
+    }
+  }
 
   // Visualizeコマンドの登録
   const visualizeCommand = vscode.commands.registerCommand(
@@ -115,102 +199,15 @@ export function activate(context: vscode.ExtensionContext) {
 
       try {
         console.log("📝 Getting source code...");
-        // ソースコードを取得
         const code = document.getText();
         const filePath = document.fileName;
         console.log("📝 Code length:", code.length);
 
-        // Gemini使用フラグをVSCode設定から読み込み
-        const config = vscode.workspace.getConfiguration("prismcode");
-        const useGemini = config.get<boolean>("useGeminiAnalysis", false);
+        // 最終解析情報を保存（タブ切り替え時の再解析で使用）
+        lastAnalyzedCode = code;
+        lastAnalyzedFilePath = filePath;
 
-        let ir: IR;
-
-        if (useGemini) {
-          // --- Gemini解析パス ---
-          const apiKey = config.get<string>("geminiApiKey", "");
-          if (!apiKey) {
-            const action = await vscode.window.showErrorMessage(
-              "Gemini APIキーが設定されていません。設定でprismcode.geminiApiKeyを入力してください。",
-              "設定を開く",
-            );
-            if (action === "設定を開く") {
-              await vscode.commands.executeCommand(
-                "workbench.action.openSettings",
-                "prismcode.geminiApiKey",
-              );
-            }
-            return;
-          }
-
-          const modelName = config.get<string>(
-            "geminiModel",
-            "gemini-2.0-flash-lite",
-          );
-          console.log(`🤖 Gemini APIでコードを解析中... (model: ${modelName})`);
-          vscode.window.showInformationMessage(
-            `Gemini APIでコードを解析中... (${modelName})`,
-          );
-
-          const analyzer = new GeminiAnalyzer(apiKey, modelName);
-          ir = await analyzer.analyzeCode(code, filePath);
-
-          console.log("✅ Gemini解析完了:", {
-            nodes: ir.nodes.length,
-            edges: ir.edges.length,
-          });
-        } else {
-          // --- 既存のts-morphパス ---
-          if (!cacheManager) {
-            vscode.window.showErrorMessage(
-              "CacheManagerが初期化されていません",
-            );
-            return;
-          }
-
-          vscode.window.showInformationMessage("コードを解析中...");
-          console.log("🔍 Getting IR (cache-aware)...");
-
-          const irResult = await cacheManager.getIR(filePath, code);
-
-          if (irResult.hit) {
-            console.log(`✅ キャッシュから取得 (${irResult.processingTime}ms)`);
-            vscode.window.showInformationMessage(
-              `キャッシュから読み込みました（${irResult.processingTime}ms）`,
-            );
-          } else {
-            console.log(`✅ 新規生成 (${irResult.processingTime}ms)`);
-          }
-
-          ir = irResult.data!;
-          console.log("✅ IR ready:", {
-            nodes: ir.nodes.length,
-            edges: ir.edges.length,
-            source: irResult.source,
-          });
-        }
-
-        // 関数が見つからない場合は早期リターン
-        if (ir.nodes.length === 0) {
-          vscode.window.showWarningMessage(
-            `可視化できる関数定義が見つかりませんでした。このファイルには関数宣言やアロー関数が含まれていない可能性があります（例: モジュールレベルの実行コードのみのファイル）。`,
-          );
-          return;
-        }
-
-        // エディタエリアにフローチャートパネルを開く
-        console.log("🎨 Creating/showing FlowChartPanel...");
-        const panel = FlowChartPanel.createOrShow(context.extensionUri);
-        console.log("✅ Panel created/shown");
-
-        console.log("📤 Updating flowchart...");
-        panel.updateFlowChart(ir);
-        console.log("✅ Flowchart updated");
-
-        const analysisMethod = useGemini ? "（Gemini API）" : "";
-        vscode.window.showInformationMessage(
-          `フローチャートを生成しました${analysisMethod}（ノード: ${ir.nodes.length}個, エッジ: ${ir.edges.length}個）`,
-        );
+        await analyzeAndUpdatePanel(code, filePath);
       } catch (error: any) {
         console.error("❌ Visualization error:", error);
         console.error("Stack trace:", error.stack);
@@ -236,6 +233,29 @@ export function activate(context: vscode.ExtensionContext) {
             await vscode.commands.executeCommand(
               "workbench.action.openSettings",
               "prismcode.geminiModel",
+            );
+          }
+        } else if (error instanceof CopilotUnavailableError) {
+          const action = await vscode.window.showErrorMessage(
+            error.message,
+            "設定を開く",
+            "Gemini APIを使用する",
+          );
+          if (action === "設定を開く") {
+            await vscode.commands.executeCommand(
+              "workbench.action.openSettings",
+              "prismcode.aiProvider",
+            );
+          } else if (action === "Gemini APIを使用する") {
+            await vscode.workspace
+              .getConfiguration("prismcode")
+              .update(
+                "aiProvider",
+                "gemini",
+                vscode.ConfigurationTarget.Global,
+              );
+            vscode.window.showInformationMessage(
+              "AIプロバイダーを Gemini に変更しました。prismcode.geminiApiKey も設定してください。",
             );
           }
         } else {

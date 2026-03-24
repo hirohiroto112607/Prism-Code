@@ -158,7 +158,36 @@
 
 ---
 
-## 設定カスタマイズ
+## AI プロバイダー設定
+
+VSCode設定（`Cmd/Ctrl + ,`）から `Prism Code` の設定を変更できます。
+
+### prismcode.aiProvider（推奨設定）
+
+| 値 | 動作 |
+| :--- | :--- |
+| `"auto"`（デフォルト） | Copilot → Gemini の順で自動選択 |
+| `"copilot"` | GitHub Copilot のみ使用（APIキー不要） |
+| `"gemini"` | Gemini API のみ使用（APIキー必要） |
+| `"none"` | AIなし・ts-morph 静的解析のみ |
+
+### GitHub Copilot を使う場合（推奨・無料）
+
+1. [GitHub Copilot](https://marketplace.visualstudio.com/items?itemName=GitHub.copilot) 拡張機能をインストール
+2. GitHub アカウントでサインイン
+3. `prismcode.aiProvider` を `"auto"` または `"copilot"` に設定
+
+追加のAPIキーは不要です。
+
+### Gemini API を使う場合
+
+1. [Google AI Studio](https://aistudio.google.com/apikey) で APIキーを取得
+2. `prismcode.geminiApiKey` に APIキーを設定
+3. `prismcode.aiProvider` を `"gemini"` に設定（または `"auto"` のままにする）
+
+---
+
+## その他の設定カスタマイズ
 
 `.prismcode/config.json` を直接編集することで設定を変更できます。
 
@@ -192,3 +221,9 @@
 
 **Gemini APIの解析結果が保存されない**
 → AI解析結果のキャッシュ（`ir-cache`）は `config.json` の `cacheEnabled: true` が必要です。
+
+**GitHub Copilotが認識されない**
+→ GitHub Copilot 拡張機能がインストールされ、サインイン済みか確認してください。サイドバーのAIプロバイダーインジケーター（青いドット）が点灯していれば利用可能です。
+
+**`prismcode.useGeminiAnalysis` が効かなくなった**
+→ このオプションは非推奨です。`prismcode.aiProvider` を `"gemini"` に設定してください。

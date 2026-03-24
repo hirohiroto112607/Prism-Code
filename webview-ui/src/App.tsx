@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { Node, Edge } from "reactflow";
+import type { Edge, Node } from "reactflow";
 import { FlowChart } from "./components/FlowChart";
 import { MacroView } from "./components/MacroView";
 import type { DiagramType, IR } from "./types/ir";
@@ -119,7 +119,14 @@ function App() {
   }
 
   if (viewMode === "macro" && macroData) {
-    return <MacroView data={macroData} />;
+    return (
+      <MacroView
+        data={macroData}
+        onSwitchToMicro={
+          nodes.length > 0 ? () => setViewMode("micro") : undefined
+        }
+      />
+    );
   }
 
   if (viewMode === "micro" && nodes.length > 0) {
@@ -138,6 +145,7 @@ function App() {
           current={diagramType}
           aiReason={aiReason}
           onChange={handleDiagramTypeChange}
+          onSwitchToMacro={macroData ? () => setViewMode("macro") : undefined}
         />
         <div style={{ flex: 1, minHeight: 0 }}>
           <FlowChart
@@ -192,9 +200,15 @@ interface DiagramTypeBarProps {
   current: DiagramType;
   aiReason: string | null;
   onChange: (type: DiagramType) => void;
+  onSwitchToMacro?: () => void;
 }
 
-function DiagramTypeBar({ current, aiReason, onChange }: DiagramTypeBarProps) {
+function DiagramTypeBar({
+  current,
+  aiReason,
+  onChange,
+  onSwitchToMacro,
+}: DiagramTypeBarProps) {
   return (
     <div
       style={{
@@ -264,6 +278,41 @@ function DiagramTypeBar({ current, aiReason, onChange }: DiagramTypeBarProps) {
           </button>
         );
       })}
+
+      {/* マクロビュー切り替えボタン */}
+      {onSwitchToMacro && (
+        <button
+          type="button"
+          onClick={onSwitchToMacro}
+          title="マクロビュー（俯瞰）に切り替え"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "4px",
+            padding: "3px 10px",
+            fontSize: "12px",
+            color: "#9ca3af",
+            background: "transparent",
+            border: "1px solid #555",
+            borderRadius: "5px",
+            cursor: "pointer",
+            whiteSpace: "nowrap",
+            flexShrink: 0,
+            marginLeft: "auto",
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "#374151";
+            e.currentTarget.style.color = "#fff";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "transparent";
+            e.currentTarget.style.color = "#9ca3af";
+          }}
+        >
+          🔭 マクロビュー
+        </button>
+      )}
     </div>
   );
 }

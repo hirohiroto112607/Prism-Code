@@ -3,12 +3,12 @@
  * すべてのキャッシュ操作を統括し、鮮度チェック・自動更新を管理する
  */
 
-import * as fs from "fs/promises";
-import * as path from "path";
-import type { IndexManager } from "../index/IndexManager";
-import type { AST } from "../parser/AST";
-import type { IR } from "../ir/IR";
+import * as fs from "node:fs/promises";
+import * as path from "node:path";
 import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
+import type { IndexManager } from "../index/IndexManager";
+import type { IR } from "../ir/IR";
+import type { AST } from "../parser/AST";
 import { IRTransformer } from "../transformer/IRTransformer";
 
 export interface CacheStats {
@@ -83,10 +83,11 @@ export class CacheManager {
     const startTime = Date.now();
     const config = this.indexManager.getConfig();
 
-    // キャッシュが無効な場合は常に新規生成
-    if (!config?.cacheEnabled) {
-      const astResult = await this.getAST(filePath, code);
-      const ir = this.transformer.transform(astResult.data!, {
+    // キャッシュが明示的に無効化されている場合のみスキップ（undefined は有効扱い）
+    if (config?.cacheEnabled === false) {
+      const { data: ast } = await this.getAST(filePath, code);
+      if (!ast) throw new Error("AST解析に失敗しました");
+      const ir = this.transformer.transform(ast, {
         language: this.parser.getSupportedLanguage(),
         file: filePath,
       });
@@ -138,14 +139,15 @@ export class CacheManager {
       );
 
       // ASTを取得（インメモリのみ）
-      const astResult = await this.getAST(filePath, code);
+      const { data: ast } = await this.getAST(filePath, code);
+      if (!ast) throw new Error("AST解析に失敗しました");
 
       // ファイルハッシュを計算してインデックスエントリを更新
       const fileHash = await this.indexManager.calculateFileHash(filePath);
-      await this.updateFileIndex(filePath, astResult.data!, fileHash);
+      await this.updateFileIndex(filePath, ast, fileHash);
 
       // IRに変換
-      const ir = this.transformer.transform(astResult.data!, {
+      const ir = this.transformer.transform(ast, {
         language: this.parser.getSupportedLanguage(),
         file: filePath,
       });
@@ -171,8 +173,9 @@ export class CacheManager {
       console.error(`❌ IRキャッシュ処理エラー: ${filePath}`, error);
 
       // エラー時はフォールバック
-      const astResult = await this.getAST(filePath, code);
-      const ir = this.transformer.transform(astResult.data!, {
+      const { data: ast } = await this.getAST(filePath, code);
+      if (!ast) throw new Error("AST解析に失敗しました");
+      const ir = this.transformer.transform(ast, {
         language: this.parser.getSupportedLanguage(),
         file: filePath,
       });
@@ -276,8 +279,7 @@ export class CacheManager {
         this.indexManager.getProjectIndex()?.projectRoot || "",
         filePath,
       );
-      const cacheFileName =
-        relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-") + ".json";
+      const cacheFileName = `${relativePath.replace(/[/\\]/g, "-").replace(/\./g, "-")}.json`;
 
       // IRキャッシュ削除
       const irCachePath = path.join(

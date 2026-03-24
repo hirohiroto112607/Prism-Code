@@ -1,18 +1,18 @@
-import { Project, type SourceFile, SyntaxKind, Node } from "ts-morph";
-import type { IParser } from "../../core/parser/IParser";
+import { Node, Project, type SourceFile, SyntaxKind } from "ts-morph";
 import type {
   AST,
   ASTNode,
+  ExpressionStatementNode,
+  ForStatementNode,
   FunctionNode,
   IfStatementNode,
-  ForStatementNode,
-  WhileStatementNode,
-  VariableDeclarationNode,
-  ReturnStatementNode,
-  ExpressionStatementNode,
-  SourceLocation,
   Parameter,
+  ReturnStatementNode,
+  SourceLocation,
+  VariableDeclarationNode,
+  WhileStatementNode,
 } from "../../core/parser/AST";
+import type { IParser } from "../../core/parser/IParser";
 
 /**
  * TypeScriptパーサー
