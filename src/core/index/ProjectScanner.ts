@@ -5,7 +5,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
-import type { AST } from "../parser/AST";
+import type { IRNode } from "../ir/IR";
+import type { AST, ASTNode } from "../parser/AST";
 import { IRTransformer } from "../transformer/IRTransformer";
 import type { IndexManager } from "./IndexManager";
 import { SimpleScanner } from "./SimpleScanner";
@@ -269,8 +270,7 @@ export class ProjectScanner {
       if (!cached) {
         continue;
       }
-      // CacheEntry形式（{ data: IR, timestamp, ... }）の場合は.dataを取得
-      const ir = cached.nodes ? cached : cached.data;
+      const ir = cached.data;
       if (!ir?.nodes) {
         continue;
       }
@@ -284,7 +284,10 @@ export class ProjectScanner {
 
           // 対応するendノードを見つける
           const endNode = ir.nodes.find(
-            (n: any) => n.type === "end" && n.label.includes(functionName),
+            (n: IRNode) =>
+              n.type === "end" &&
+              "label" in n &&
+              n.label.includes(functionName),
           );
 
           // 開始ノードと終了ノードの間にあるノードを収集
@@ -295,7 +298,16 @@ export class ProjectScanner {
           const bodyNodes = ir.nodes.slice(startIndex + 1, endIndex);
 
           // locationを持つノードから位置情報を取得
-          const nodesWithLocation = bodyNodes.filter((n: any) => n.location);
+          type IRNodeWithLocation = IRNode & {
+            location: {
+              start: { line: number; column: number };
+              end: { line: number; column: number };
+            };
+          };
+          const nodesWithLocation = bodyNodes.filter(
+            (n: IRNode): n is IRNodeWithLocation =>
+              "location" in n && !!n.location,
+          );
           const location =
             nodesWithLocation.length > 0
               ? {
@@ -361,7 +373,7 @@ export class ProjectScanner {
 
     let complexity = 1; // 基本パス
 
-    const countComplexity = (nodes: any[]): void => {
+    const countComplexity = (nodes: ASTNode[]): void => {
       for (const node of nodes) {
         if (node.type === "IfStatement") {
           complexity++;
@@ -424,7 +436,7 @@ export class ProjectScanner {
   /**
    * 関数本体の複雑度を計算（簡易版）
    */
-  private calculateFunctionComplexity(bodyNodes: any[]): number {
+  private calculateFunctionComplexity(bodyNodes: IRNode[]): number {
     let complexity = 1; // 基本パス
 
     for (const node of bodyNodes) {
@@ -441,16 +453,16 @@ export class ProjectScanner {
   /**
    * 関数本体にループが含まれるかチェック
    */
-  private hasFunctionLoops(bodyNodes: any[]): boolean {
+  private hasFunctionLoops(bodyNodes: IRNode[]): boolean {
     return bodyNodes.some(
-      (node: any) => node.type === "for" || node.type === "while",
+      (node) => node.type === "for" || node.type === "while",
     );
   }
 
   /**
    * 関数本体に条件分岐が含まれるかチェック
    */
-  private hasFunctionConditionals(bodyNodes: any[]): boolean {
-    return bodyNodes.some((node: any) => node.type === "if");
+  private hasFunctionConditionals(bodyNodes: IRNode[]): boolean {
+    return bodyNodes.some((node) => node.type === "if");
   }
 }

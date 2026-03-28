@@ -71,8 +71,8 @@ export function activate(context: vscode.ExtensionContext) {
       .initialize()
       .then(() => {
         const config = indexManager?.getConfig();
-        if (config?.autoUpdate) {
-          setupFileWatcher(cacheManager!, context);
+        if (config?.autoUpdate && cacheManager) {
+          setupFileWatcher(cacheManager, context);
           console.log("✅ ファイル監視を有効化（自動キャッシュ無効化）");
         }
       })
@@ -126,7 +126,11 @@ export function activate(context: vscode.ExtensionContext) {
       }
 
       const irResult = await cacheManager.getIR(filePath, code);
-      ir = irResult.data!;
+      if (!irResult.data) {
+        vscode.window.showErrorMessage("IRデータが取得できませんでした");
+        return;
+      }
+      ir = irResult.data;
 
       const selector = new VisualizationSelector();
       const target = requestedDiagramType ?? selector.selectByRules(code).type;
@@ -154,8 +158,9 @@ export function activate(context: vscode.ExtensionContext) {
           lastAnalyzedFilePath,
           diagramType,
         );
-      } catch (error: any) {
-        vscode.window.showErrorMessage(`再解析エラー: ${error.message}`);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`再解析エラー: ${message}`);
       }
     });
 
@@ -208,9 +213,11 @@ export function activate(context: vscode.ExtensionContext) {
         lastAnalyzedFilePath = filePath;
 
         await analyzeAndUpdatePanel(code, filePath);
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("❌ Visualization error:", error);
-        console.error("Stack trace:", error.stack);
+        if (error instanceof Error) {
+          console.error("Stack trace:", error.stack);
+        }
 
         if (error instanceof GeminiQuotaError) {
           const action = await vscode.window.showErrorMessage(
@@ -306,10 +313,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.window.showInformationMessage(
           `インデックス生成完了！（${projectIndex.metadata.totalFiles}ファイル, ${projectIndex.metadata.totalFunctions}関数）`,
         );
-      } catch (error: any) {
-        vscode.window.showErrorMessage(
-          `インデックス生成エラー: ${error.message}`,
-        );
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : String(error);
+        vscode.window.showErrorMessage(`インデックス生成エラー: ${message}`);
         console.error("インデックス生成エラー:", error);
       }
     },

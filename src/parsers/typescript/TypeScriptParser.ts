@@ -86,10 +86,10 @@ export class TypeScriptParser implements IParser {
   /**
    * 関数宣言を解析
    */
-  private parseFunctionDeclaration(fn: any): FunctionNode | null {
+  private parseFunctionDeclaration(fn: Node): FunctionNode | null {
     try {
       const name = fn.getName() || "anonymous";
-      const parameters: Parameter[] = fn.getParameters().map((param: any) => ({
+      const parameters: Parameter[] = fn.getParameters().map((param: Node) => ({
         name: param.getName(),
         type: param.getTypeNode()?.getText(),
       }));
@@ -114,11 +114,11 @@ export class TypeScriptParser implements IParser {
   /**
    * アロー関数を解析
    */
-  private parseArrowFunction(name: string, arrow: any): FunctionNode | null {
+  private parseArrowFunction(name: string, arrow: Node): FunctionNode | null {
     try {
       const parameters: Parameter[] = arrow
         .getParameters()
-        .map((param: any) => ({
+        .map((param: Node) => ({
           name: param.getName(),
           type: param.getTypeNode()?.getText(),
         }));
@@ -156,7 +156,7 @@ export class TypeScriptParser implements IParser {
   /**
    * 文のリストを解析
    */
-  private parseStatements(statements: any[]): ASTNode[] {
+  private parseStatements(statements: Node[]): ASTNode[] {
     const nodes: ASTNode[] = [];
 
     for (const stmt of statements) {
@@ -172,7 +172,7 @@ export class TypeScriptParser implements IParser {
   /**
    * 単一の文を解析
    */
-  private parseStatement(stmt: any): ASTNode | null {
+  private parseStatement(stmt: Node): ASTNode | null {
     try {
       const kind = stmt.getKind();
 
@@ -206,7 +206,7 @@ export class TypeScriptParser implements IParser {
   /**
    * If文を解析
    */
-  private parseIfStatement(stmt: any): IfStatementNode {
+  private parseIfStatement(stmt: Node): IfStatementNode {
     const condition = stmt.getExpression().getText();
     const thenBranch = this.parseStatements(
       stmt.getThenStatement().getKind() === SyntaxKind.Block
@@ -235,7 +235,7 @@ export class TypeScriptParser implements IParser {
   /**
    * For文を解析
    */
-  private parseForStatement(stmt: any): ForStatementNode {
+  private parseForStatement(stmt: Node): ForStatementNode {
     const initializer = stmt.getInitializer()?.getText();
     const condition = stmt.getCondition()?.getText();
     const incrementor = stmt.getIncrementor()?.getText();
@@ -260,7 +260,7 @@ export class TypeScriptParser implements IParser {
   /**
    * While文を解析
    */
-  private parseWhileStatement(stmt: any): WhileStatementNode {
+  private parseWhileStatement(stmt: Node): WhileStatementNode {
     const condition = stmt.getExpression().getText();
     const bodyStmt = stmt.getStatement();
     const body = this.parseStatements(
@@ -280,7 +280,7 @@ export class TypeScriptParser implements IParser {
   /**
    * 変数宣言文を解析
    */
-  private parseVariableStatement(stmt: any): VariableDeclarationNode | null {
+  private parseVariableStatement(stmt: Node): VariableDeclarationNode | null {
     const declarations = stmt.getDeclarationList().getDeclarations();
     if (declarations.length === 0) {
       return null;
@@ -300,7 +300,7 @@ export class TypeScriptParser implements IParser {
   /**
    * Return文を解析
    */
-  private parseReturnStatement(stmt: any): ReturnStatementNode {
+  private parseReturnStatement(stmt: Node): ReturnStatementNode {
     return {
       type: "ReturnStatement",
       value: stmt.getExpression()?.getText(),
@@ -311,7 +311,7 @@ export class TypeScriptParser implements IParser {
   /**
    * 式文を解析
    */
-  private parseExpressionStatement(stmt: any): ExpressionStatementNode {
+  private parseExpressionStatement(stmt: Node): ExpressionStatementNode {
     return {
       type: "ExpressionStatement",
       expression: stmt.getExpression().getText(),
@@ -322,7 +322,7 @@ export class TypeScriptParser implements IParser {
   /**
    * ノードの位置情報を取得
    */
-  private getLocation(node: any): SourceLocation {
+  private getLocation(node: Node): SourceLocation {
     const start = node.getStartLineNumber();
     const end = node.getEndLineNumber();
 

@@ -68,7 +68,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
   /**
    * マクロビューデータをWebViewに送信
    */
-  public sendMacroViewData(data: any): void {
+  public sendMacroViewData(data: unknown): void {
     if (this._view) {
       console.log("Sending macro view data to WebView:", data);
       this._view.show?.(true);
@@ -82,7 +82,7 @@ export class WebViewProvider implements vscode.WebviewViewProvider {
   /**
    * 概要ビューデータをWebViewに送信
    */
-  public sendOverviewData(data: any): void {
+  public sendOverviewData(data: unknown): void {
     if (this._view) {
       console.log("Sending overview data to WebView:", data);
       this._view.show?.(true);

@@ -13,6 +13,7 @@ export class FlowChartPanel {
   private readonly _extensionUri: vscode.Uri;
   private _disposables: vscode.Disposable[] = [];
   private _onDiagramTypeChange?: (diagramType: DiagramType) => void;
+  private currentViewMode: "micro" | "macro" = "micro";
 
   /**
    * FlowChartPanelを作成または既存のものを表示
