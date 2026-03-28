@@ -8,7 +8,6 @@ import { CacheManager } from "./core/cache/CacheManager";
 import { Exporter } from "./core/index/Exporter";
 import { IndexManager } from "./core/index/IndexManager";
 import { ProjectScanner } from "./core/index/ProjectScanner";
-import { VisualizationSelector } from "./core/visualization/VisualizationSelector";
 import { AIChatViewProvider } from "./webview/AIChatViewProvider";
 import { FlowChartPanel } from "./webview/FlowChartPanel";
 
@@ -113,32 +112,18 @@ export function activate(context: vscode.ExtensionContext) {
       requestedDiagramType,
     );
 
-    if (aiResult) {
-      ir = aiResult.ir;
-      analysisMethod =
-        aiResult.provider === "copilot"
-          ? `（GitHub Copilot: ${aiResult.modelInfo}）`
-          : `（Gemini: ${aiResult.modelInfo}）`;
-    } else {
-      if (!cacheManager) {
-        vscode.window.showErrorMessage("CacheManagerが初期化されていません");
-        return;
-      }
-
-      const irResult = await cacheManager.getIR(filePath, code);
-      if (!irResult.data) {
-        vscode.window.showErrorMessage("IRデータが取得できませんでした");
-        return;
-      }
-      ir = irResult.data;
-
-      const selector = new VisualizationSelector();
-      const target = requestedDiagramType ?? selector.selectByRules(code).type;
-      ir.metadata.diagramType = target;
-      ir.metadata.aiReason = requestedDiagramType
-        ? `ユーザーが手動で選択したテンプレート`
-        : `${selector.selectByRules(code).reason}（静的ルール）`;
+    if (!aiResult) {
+      vscode.window.showErrorMessage(
+        "コード解析にはAIが必要です。設定で prismcode.aiProvider を確認してください（GitHub Copilot または Gemini APIキーが必要です）。",
+      );
+      return;
     }
+
+    ir = aiResult.ir;
+    analysisMethod =
+      aiResult.provider === "copilot"
+        ? `（GitHub Copilot: ${aiResult.modelInfo}）`
+        : `（Gemini: ${aiResult.modelInfo}）`;
 
     if (ir.nodes.length === 0) {
       vscode.window.showWarningMessage(
@@ -266,9 +251,8 @@ export function activate(context: vscode.ExtensionContext) {
             );
           }
         } else {
-          vscode.window.showErrorMessage(
-            `エラーが発生しました: ${error.message}`,
-          );
+          const message = error instanceof Error ? error.message : String(error);
+          vscode.window.showErrorMessage(`エラーが発生しました: ${message}`);
         }
       }
     },

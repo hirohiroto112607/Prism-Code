@@ -1,4 +1,10 @@
-import type { SourceLocation } from "../parser/AST";
+/**
+ * ソースコード上の位置情報
+ */
+export interface SourceLocation {
+  start: { line: number; column: number };
+  end: { line: number; column: number };
+}
 
 /**
  * 可視化テンプレートの種類

@@ -9,7 +9,7 @@ import { GeminiAnalyzer, GeminiQuotaError } from "./GeminiAnalyzer";
  * - "auto"    : Copilot を優先し、利用不可なら Gemini、それも不可なら null を返す
  * - "copilot" : GitHub Copilot Language Model API のみを使用
  * - "gemini"  : Gemini API のみを使用（APIキーが必要）
- * - "none"    : AIを使用しない（ts-morph 静的解析へフォールバック）
+ * - "none"    : AIを使用しない（可視化機能は利用不可）
  */
 export type AIProvider = "auto" | "copilot" | "gemini" | "none";
 
@@ -25,7 +25,7 @@ export interface AnalyzerResult {
 /**
  * 設定に基づいて最適なAIでコードを解析する
  *
- * @returns 解析結果、またはAI使用不要/不可の場合は null（ts-morphへフォールバック）
+ * @returns 解析結果、またはAI使用不要/不可の場合は null
  * @throws AIが明示指定されているが利用できない場合はエラーをスロー
  */
 export async function analyzeCode(
@@ -78,7 +78,7 @@ export async function analyzeCode(
           "Gemini APIキーが設定されていません。設定で prismcode.geminiApiKey を入力してください。",
         );
       }
-      // auto モードでキーなしなら null を返す（ts-morph へ）
+      // auto モードでキーなしなら null を返す
       return null;
     }
 
@@ -117,7 +117,7 @@ export async function getActiveProviderLabel(
   const provider = config.get<AIProvider>("aiProvider", "auto");
 
   if (provider === "none") {
-    return { label: "AI 無効", detail: "ts-morph 静的解析" };
+    return { label: "AI 無効", detail: "可視化機能は利用不可" };
   }
 
   if (provider === "copilot") {
@@ -158,7 +158,7 @@ export async function getActiveProviderLabel(
 
   return {
     label: "AI 無効 (自動選択)",
-    detail: "Copilot も Gemini も利用不可 → ts-morph",
+    detail: "Copilot も Gemini も利用不可 → 可視化不可",
   };
 }
 

@@ -4,10 +4,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { TypeScriptParser } from "../../parsers/typescript/TypeScriptParser";
 import type { IRNode } from "../ir/IR";
-import type { AST, ASTNode } from "../parser/AST";
-import { IRTransformer } from "../transformer/IRTransformer";
 import type { IndexManager } from "./IndexManager";
 import { SimpleScanner } from "./SimpleScanner";
 import type {
@@ -21,13 +18,9 @@ import type {
 
 export class ProjectScanner {
   private indexManager: IndexManager;
-  private parser: TypeScriptParser;
-  private transformer: IRTransformer;
 
   constructor(indexManager: IndexManager) {
     this.indexManager = indexManager;
-    this.parser = new TypeScriptParser();
-    this.transformer = new IRTransformer();
   }
 
   /**
@@ -101,7 +94,7 @@ export class ProjectScanner {
   }
 
   /**
-   * ファイルを解析してFileIndexEntryを生成
+   * ファイルを解析してFileIndexEntryを生成（テキストベースの簡易解析）
    */
   private async analyzeFile(
     filePath: string,
@@ -119,37 +112,13 @@ export class ProjectScanner {
 
     console.log(`解析中: ${relativePath}`);
 
-    // ファイルを読み込み
     const code = await fs.readFile(filePath, "utf-8");
     const fileHash = await this.indexManager.calculateFileHash(filePath);
 
-    // パース
-    const ast = this.parser.parse(code, filePath);
-
-    // IR変換
-    const ir = this.transformer.transform(ast, {
-      language: this.detectLanguage(filePath),
-      file: relativePath,
-    });
-
-    // IRをCacheEntry形式でキャッシュ（CacheManagerと互換性を保つ）
-    const cacheEntry = {
-      data: ir,
-      timestamp: Date.now(),
-      fileHash,
-      filePath,
-    };
-    await this.indexManager.saveIRCache(filePath, cacheEntry);
-
-    // メトリクスを計算
     const lineCount = code.split("\n").length;
-    const functionCount = this.countFunctions(ast);
-    const classCount = this.countClasses(ast);
-    const complexity = this.calculateComplexity(ast);
-
-    // import/exportを抽出
-    const imports = this.extractImports(ast);
-    const exports = this.extractExports(ast);
+    const functionCount = this.countFunctionsInCode(code);
+    const classCount = this.countClassesInCode(code);
+    const complexity = this.calculateComplexityFromCode(code);
 
     const entry: FileIndexEntry = {
       filePath: relativePath,
@@ -161,8 +130,8 @@ export class ProjectScanner {
       functionCount,
       classCount,
       complexity,
-      imports,
-      exports,
+      imports: [],
+      exports: [],
     };
 
     return entry;
@@ -338,82 +307,29 @@ export class ProjectScanner {
   }
 
   /**
-   * ASTから関数の数をカウント
+   * コードから関数の数をカウント（テキストベース）
    */
-  private countFunctions(ast: AST): number {
-    if (ast.type !== "Program") {
-      return 0;
-    }
-
-    let count = 0;
-    for (const node of ast.body) {
-      if (node.type === "FunctionDeclaration") {
-        count++;
-      }
-    }
-
-    return count;
+  private countFunctionsInCode(code: string): number {
+    const functionKeywords = (code.match(/\bfunction\b/g) || []).length;
+    const arrowFunctions = (code.match(/=>\s*[{(]/g) || []).length;
+    return functionKeywords + arrowFunctions;
   }
 
   /**
-   * ASTからクラスの数をカウント
+   * コードからクラスの数をカウント（テキストベース）
    */
-  private countClasses(_ast: AST): number {
-    // TODO: クラス定義のサポート
-    return 0;
+  private countClassesInCode(code: string): number {
+    return (code.match(/\bclass\s+\w/g) || []).length;
   }
 
   /**
-   * サイクロマティック複雑度を計算（簡易版）
+   * サイクロマティック複雑度を計算（テキストベース簡易版）
    */
-  private calculateComplexity(ast: AST): number {
-    if (ast.type !== "Program") {
-      return 1;
-    }
-
-    let complexity = 1; // 基本パス
-
-    const countComplexity = (nodes: ASTNode[]): void => {
-      for (const node of nodes) {
-        if (node.type === "IfStatement") {
-          complexity++;
-          if (node.thenBranch) {
-            countComplexity(node.thenBranch);
-          }
-          if (node.elseBranch) {
-            countComplexity(node.elseBranch);
-          }
-        } else if (
-          node.type === "ForStatement" ||
-          node.type === "WhileStatement"
-        ) {
-          complexity++;
-          if (node.body) {
-            countComplexity(node.body);
-          }
-        }
-      }
-    };
-
-    countComplexity(ast.body);
-
-    return complexity;
-  }
-
-  /**
-   * import文を抽出
-   */
-  private extractImports(_ast: AST): string[] {
-    // TODO: import文の解析
-    return [];
-  }
-
-  /**
-   * export文を抽出
-   */
-  private extractExports(_ast: AST): string[] {
-    // TODO: export文の解析
-    return [];
+  private calculateComplexityFromCode(code: string): number {
+    const ifCount = (code.match(/\bif\s*\(/g) || []).length;
+    const forCount = (code.match(/\bfor\s*\(/g) || []).length;
+    const whileCount = (code.match(/\bwhile\s*\(/g) || []).length;
+    return 1 + ifCount + forCount + whileCount;
   }
 
   /**
